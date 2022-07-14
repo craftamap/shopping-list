@@ -44,6 +44,7 @@ class ListService {
     );
 
     eventHub.sendToClients(JSON.stringify({ type: "putItem", id: newId }));
+    return newId;
   }
 
   putItemChecked(itemId: string, checked: boolean) {
@@ -52,8 +53,24 @@ class ListService {
       JSON.stringify({ type: "putItemChecked", id: itemId }),
     );
   }
+
+  updateItem(itemId: string, changes: { text: string }) {
+    db.updateItem(itemId, changes);
+    eventHub.sendToClients(
+      JSON.stringify({ type: "updateItem", id: itemId }),
+    );
+  }
+
   deleteItem(itemId: string) {
-    db.deleteItem(itemId);
+    // unwrap or delete all children?
+    const item = db.getItem(itemId);
+    db.getItems(item.list).filter((i) => i.parent === item.id).forEach((i) => {
+      this.moveItem(i.id, { after: item.id });
+    });
+    db.deleteItem(item.id);
+    eventHub.sendToClients(
+      JSON.stringify({ type: "deleteItem", id: itemId }),
+    );
   }
   moveItem(itemId: string, moveOperation: MoveOperation) {
     console.log("moveOperation", moveOperation);
@@ -88,7 +105,7 @@ class ListService {
     console.log("after is", after);
     console.log("before is", before);
 
-    if (moveOperation.parent) {
+    if (moveOperation.parent && moveOperation.parent !== item.id) {
       item.parent = moveOperation.parent;
     } else if (after && after.parent !== item?.parent) {
       item.parent = after?.parent;

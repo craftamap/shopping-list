@@ -251,6 +251,21 @@ export function updateItemMove(
   });
 }
 
+export function updateItem(itemId: string, changes: { text?: string }) {
+  db.transaction(() => {
+    if (changes.text) {
+      const result = db.query(
+        "UPDATE items SET text = ? WHERE id = ?",
+        [
+          changes.text,
+          itemId,
+        ],
+      );
+      console.log(result);
+    }
+  });
+}
+
 export function deleteItem(itemId: string) {
   return db.query("DELETE FROM items WHERE id = ?", [itemId]);
 }

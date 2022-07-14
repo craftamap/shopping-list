@@ -7,10 +7,13 @@ export const handler: Handlers = {
     console.log(listId);
     return new Response(JSON.stringify(listService.getItems(listId)));
   },
-  async PUT(req, ctx) {
+  async POST(req, ctx) {
     const listId = ctx.params.listid;
     const data = await req.json();
-    listService.putItem({ listId, text: data?.text });
+    const newId = listService.putItem({ listId, text: data?.text });
+    if (data?.after) {
+      listService.moveItem(newId, { after: data?.after });
+    }
     return new Response(JSON.stringify(listService.getItems(listId)));
   },
 };

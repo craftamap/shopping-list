@@ -1,10 +1,50 @@
 /** @jsx h */
 import "preact/debug";
 import "preact/devtools";
-import { Fragment, h } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { ComponentChildren, createContext, Fragment, h } from "preact";
+import {
+  Ref,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 import { tw } from "@twind";
+
+function DropArea({ id, onDrop }: { id: string; onDrop: Function }) {
+  const [dropAreaHovered, setDropAreaHovered] = useState<boolean>(false);
+
+  return (
+    <div
+      class={tw`${
+        dropAreaHovered
+          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+          : ""
+      } h-1 w-[50%] inline-block border-none!`}
+      onDragEnter={() => {
+        setDropAreaHovered(true);
+      }}
+      onDragLeave={() => {
+        setDropAreaHovered(false);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        console.log(e);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        const itemToMove = e.dataTransfer!.getData("text/plain");
+
+        onDrop(itemToMove, id);
+
+        setDropAreaHovered(false);
+      }}
+    >
+    </div>
+  );
+}
 
 function ShoppingListItem(
   { id, text, checked, children, depth = 0, onChecked, onDelete, sort }:
@@ -30,10 +70,19 @@ function ShoppingListItem(
     );
   });
 
+  const [asInput, setAsInput] = useState(text.trim() === "");
+
   const indent = `pl-${depth * 4}`;
   const itemRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<HTMLDivElement>(null);
-  const [dropAreaHovered, setDropAreaHovered] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (asInput && inputRef.current) {
+      console.log("focus");
+      inputRef.current.focus();
+    }
+  }, [asInput]);
 
   const move = (id: string, after: string) => {
     fetch(`/api/list/1/item/${id}/move`, {
@@ -47,15 +96,41 @@ function ShoppingListItem(
       method: "POST",
       body: JSON.stringify({ "parent": parent }),
     });
+  };
 
-  }
+  const addItemAfter = async (value: string) => {
+    const listId = "1";
+    await fetch(`/api/list/${listId}/item`, {
+      method: "POST",
+      body: JSON.stringify({
+        text: value,
+        after: id,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  };
+
+  const updateItem = async (value: string) => {
+    const listId = "1";
+    await fetch(`/api/list/${listId}/item/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        text: value,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  };
 
   return (
     <Fragment>
       <div
         ref={itemRef}
         data-id={id}
-        class={tw`${indent}`}
+        class={tw`${indent} flex py-2 items-center `}
         draggable
         onDragStart={(e) => {
           console.log(e);
@@ -64,88 +139,98 @@ function ShoppingListItem(
         }}
       >
         <div
-          class={tw`flex py-2 items-center `}
+          ref={dragRef}
         >
-          <div ref={dragRef}>⠿</div>
-          <label class={tw`text-lg flex flex-grow-1`}>
-            <input
-              type="checkbox"
-              checked={checked}
-              class={tw`mr-1`}
+          ⠿
+        </div>
+        <label class={tw`text-lg flex flex-grow-1`}>
+          <input
+            type="checkbox"
+            checked={checked}
+            class={tw`mr-1`}
+            onClick={(e) => {
+              e.preventDefault();
+              onChecked(id, e.currentTarget.checked);
+            }}
+          />
+          {!asInput && (
+            <span
+              class={tw`min-w-[4em]`}
               onClick={(e) => {
                 e.preventDefault();
-                onChecked(id, e.currentTarget.checked);
+                e.stopPropagation();
+                setAsInput(true);
+              }}
+            >
+              {text}
+            </span>
+          )}
+          {asInput && (
+            <input
+              enterkeyhint="enter"
+              autofocus
+              ref={inputRef}
+              draggable={false}
+              class={tw`border-solid border-b-1 border-b-blue-500 flex-grow-1`}
+              type="text"
+              value={text}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+              }}
+              onBlur={() => {
+                // TODO: updateValue()
+                setAsInput(false);
+                if (inputRef.current!.value === "") {
+                  onDelete(id);
+                }
+                updateItem(inputRef.current!.value);
+              }}
+              onKeyUp={(e) => {
+                if (e.key === "Escape") {
+                  inputRef.current!.blur();
+                }
+              }}
+              onKeyPress={(e) => {
+                if (e.key === "Enter") {
+                  // update
+                  inputRef.current!.blur();
+                  if (inputRef.current!.value === "") {
+                    onDelete(id);
+                  } else {
+                    addItemAfter("");
+                  }
+                }
               }}
             />
-            <span>
-              <span class={tw`text-xs`}>{id.substring(0, 4)} </span>
-               {text}
-              <span class={tw`text-xs text-purple`}> {sort}</span>
-            </span>
-          </label>
-          <button class={tw`p-1 rounded hover:bg-gray-200`}>⇐</button>
-          <button class={tw`p-1 rounded hover:bg-gray-200`}>⇒</button>
-          <button
-            class={tw`p-1 rounded hover:bg-gray-200`}
-            onClick={() => onDelete(id)}
-          >
-            x
-          </button>
-        </div>
-        <div
-          class={tw`${
-            dropAreaHovered
-              ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-              : ""
-          } h-1 w-[45%] inline-block border-none!`}
-          onDragEnter={() => {
-            setDropAreaHovered(true);
-          }}
-          onDragLeave={() => {
-            setDropAreaHovered(false);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            console.log(e);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const itemToMove = e.dataTransfer!.getData("text/plain");
-            const after = id;
-            move(itemToMove, after);
-
-            setDropAreaHovered(false);
-          }}
+          )}
+          <span class={tw`text-xs`}>( {id.substring(0, 4)} ,</span>
+          <span class={tw`text-xs text-purple-500`}>{sort} )</span>
+        </label>
+        <button
+          class={tw`p-1 rounded hover:bg-gray-200`}
+          onClick={() => onDelete(id)}
         >
-        </div>
-        <div
-          class={tw`${
-            dropAreaHovered
-              ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-              : ""
-          } h-1 w-[45%] inline-block border-none!`}
-          onDragEnter={() => {
-            setDropAreaHovered(true);
-          }}
-          onDragLeave={() => {
-            setDropAreaHovered(false);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            console.log(e);
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            const itemToMove = e.dataTransfer!.getData("text/plain");
-            const parent = id;
-            moveAfterParent(itemToMove, parent);
-
-            setDropAreaHovered(false);
-          }}
-        >
-        </div>
+          x
+        </button>
       </div>
       {childrenItems}
+
+      <div
+        class={tw`${indent} border-none! leading-[0]`}
+      >
+        <DropArea
+          id={id}
+          onDrop={(itemToMove: string, id: string) => {
+            move(itemToMove, id);
+          }}
+        />
+        <DropArea
+          id={id}
+          onDrop={(itemToMove: string, id: string) => {
+            moveAfterParent(itemToMove, id);
+          }}
+        />
+      </div>
     </Fragment>
   );
 }
@@ -197,7 +282,15 @@ export default function ShoppingList(
     if (!IS_BROWSER) {
       return;
     }
-    const ws = new WebSocket("ws://localhost:8000/api/ws");
+    let loc = window.location, newUri;
+    if (loc.protocol === "https:") {
+      newUri = "wss:";
+    } else {
+      newUri = "ws:";
+    }
+    newUri += "//" + loc.host;
+    newUri += loc.pathname + "api/ws";
+    const ws = new WebSocket(newUri);
     ws.onmessage = (e) => {
       reload();
     };
@@ -206,7 +299,7 @@ export default function ShoppingList(
   const addItem = async (value: string) => {
     const id = "1";
     const response = await fetch(`/api/list/${id}/item`, {
-      method: "PUT",
+      method: "POST",
       body: JSON.stringify({
         text: value,
       }),
