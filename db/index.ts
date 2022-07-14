@@ -62,7 +62,7 @@ createTable(
   [["list", "lists (id)"], ["parent", "items (id)"]],
 );
 
-interface List {
+export interface List {
   id: string;
   status: "todo" | "inprogress" | "done";
   date: Date;

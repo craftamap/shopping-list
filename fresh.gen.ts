@@ -11,6 +11,7 @@ import * as $5 from "./routes/api/list/[listid]/item/index.ts";
 import * as $6 from "./routes/api/list/index.tsx";
 import * as $7 from "./routes/api/ws.ts";
 import * as $8 from "./routes/index.tsx";
+import * as $9 from "./routes/list.tsx";
 import * as $$0 from "./islands/Counter.tsx";
 import * as $$1 from "./islands/ShoppingList.tsx";
 
@@ -25,6 +26,7 @@ const manifest = {
     "./routes/api/list/index.tsx": $6,
     "./routes/api/ws.ts": $7,
     "./routes/index.tsx": $8,
+    "./routes/list.tsx": $9,
   },
   islands: {
     "./islands/Counter.tsx": $$0,

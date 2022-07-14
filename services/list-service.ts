@@ -3,6 +3,10 @@ import { ListItem } from "../islands/ShoppingList.tsx";
 import { eventHub } from "./hub.ts";
 
 class ListService {
+  getLists() {
+    return db.getLists()
+  }
+
   getItems(id: string) {
     const items = db.getItems(id);
     console.log("getItems from db", items);
