@@ -6,10 +6,6 @@
     "preact-render-to-string": "https://esm.sh/preact-render-to-string@5.2.0?deps=preact@10.8.1",
     "@twind": "./utils/twind.ts",
     "twind": "https://esm.sh/twind@0.16.17",
-    "twind/": "https://esm.sh/twind@0.16.17/",
-    "react-dnd": "https://esm.sh/react-dnd@16.0.1?alias=react:preact/compat&target=es2022",
-    "react-dnd/": "https://esm.sh/react-dnd@16.0.1?alias=react:preact/compat&target=es2022/",
-    "react-dnd-html5-backend": "https://esm.sh/react-dnd-html5-backend@16.0.0?alias=react:preact/compat&deps=preact/compat@10.8.1&target=es2022",
-    "react-dnd-html5-backend/": "https://esm.sh/react-dnd-html5-backend@16.0.0?alias=react:preact/compat&deps=preact/compat@10.8.1&target=es2022/"
+    "twind/": "https://esm.sh/twind@0.16.17/"
   }
 }

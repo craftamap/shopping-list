@@ -8,12 +8,16 @@ import * as $2 from "./routes/api/list/[listid]/item/[itemid]/checked.ts";
 import * as $3 from "./routes/api/list/[listid]/item/[itemid]/index.ts";
 import * as $4 from "./routes/api/list/[listid]/item/[itemid]/move.ts";
 import * as $5 from "./routes/api/list/[listid]/item/index.ts";
-import * as $6 from "./routes/api/list/index.tsx";
-import * as $7 from "./routes/api/ws.ts";
-import * as $8 from "./routes/index.tsx";
-import * as $9 from "./routes/list.tsx";
+import * as $6 from "./routes/api/list/[listid]/status.ts";
+import * as $7 from "./routes/api/list/index.tsx";
+import * as $8 from "./routes/api/ws.ts";
+import * as $9 from "./routes/index.tsx";
+import * as $10 from "./routes/list/[listId].tsx";
+import * as $11 from "./routes/list/add.tsx";
+import * as $12 from "./routes/list/index.tsx";
 import * as $$0 from "./islands/Counter.tsx";
 import * as $$1 from "./islands/ShoppingList.tsx";
+import * as $$2 from "./islands/Status.tsx";
 
 const manifest = {
   routes: {
@@ -23,14 +27,18 @@ const manifest = {
     "./routes/api/list/[listid]/item/[itemid]/index.ts": $3,
     "./routes/api/list/[listid]/item/[itemid]/move.ts": $4,
     "./routes/api/list/[listid]/item/index.ts": $5,
-    "./routes/api/list/index.tsx": $6,
-    "./routes/api/ws.ts": $7,
-    "./routes/index.tsx": $8,
-    "./routes/list.tsx": $9,
+    "./routes/api/list/[listid]/status.ts": $6,
+    "./routes/api/list/index.tsx": $7,
+    "./routes/api/ws.ts": $8,
+    "./routes/index.tsx": $9,
+    "./routes/list/[listId].tsx": $10,
+    "./routes/list/add.tsx": $11,
+    "./routes/list/index.tsx": $12,
   },
   islands: {
     "./islands/Counter.tsx": $$0,
     "./islands/ShoppingList.tsx": $$1,
+    "./islands/Status.tsx": $$2,
   },
   baseUrl: import.meta.url,
 };

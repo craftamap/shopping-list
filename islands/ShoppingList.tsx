@@ -1,19 +1,16 @@
 /** @jsx h */
 import "preact/debug";
 import "preact/devtools";
-import { ComponentChildren, createContext, Fragment, h } from "preact";
-import {
-  Ref,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "preact/hooks";
+import { createContext, Fragment, h } from "preact";
+import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 import { tw } from "@twind";
 
-function DropArea({ id, onDrop }: { id: string; onDrop: Function }) {
+const ListIdContext = createContext("");
+
+function DropArea(
+  { id, onDrop, width }: { id: string; onDrop: Function; width?: string },
+) {
   const [dropAreaHovered, setDropAreaHovered] = useState<boolean>(false);
 
   return (
@@ -22,7 +19,7 @@ function DropArea({ id, onDrop }: { id: string; onDrop: Function }) {
         dropAreaHovered
           ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
           : ""
-      } h-1 w-[50%] inline-block border-none!`}
+      } h-1 w-[${width ?? "50%"}] inline-block border-none!`}
       onDragEnter={() => {
         setDropAreaHovered(true);
       }}
@@ -55,6 +52,8 @@ function ShoppingListItem(
       onDelete: (id: string) => void;
     },
 ) {
+  const listId = useContext(ListIdContext);
+
   const childrenItems = (children || []).map((item) => {
     return (
       <ShoppingListItem
@@ -83,23 +82,23 @@ function ShoppingListItem(
       inputRef.current.focus();
     }
   }, [asInput]);
+  console.log(listId);
 
   const move = (id: string, after: string) => {
-    fetch(`/api/list/1/item/${id}/move`, {
+    fetch(`/api/list/${listId}/item/${id}/move`, {
       method: "POST",
       body: JSON.stringify({ "after": after }),
     });
   };
 
   const moveAfterParent = (id: string, parent: string) => {
-    fetch(`/api/list/1/item/${id}/move`, {
+    fetch(`/api/list/${listId}/item/${id}/move`, {
       method: "POST",
       body: JSON.stringify({ "parent": parent }),
     });
   };
 
   const addItemAfter = async (value: string) => {
-    const listId = "1";
     await fetch(`/api/list/${listId}/item`, {
       method: "POST",
       body: JSON.stringify({
@@ -113,7 +112,6 @@ function ShoppingListItem(
   };
 
   const updateItem = async (value: string) => {
-    const listId = "1";
     await fetch(`/api/list/${listId}/item/${id}`, {
       method: "PUT",
       body: JSON.stringify({
@@ -167,7 +165,7 @@ function ShoppingListItem(
           )}
           {asInput && (
             <input
-              enterkeyhint="enter"
+              enterkeyhint="send"
               autofocus
               ref={inputRef}
               draggable={false}
@@ -185,12 +183,13 @@ function ShoppingListItem(
                 }
                 updateItem(inputRef.current!.value);
               }}
+              onSubmit={(e) => {
+                alert(e);
+              }}
               onKeyUp={(e) => {
                 if (e.key === "Escape") {
                   inputRef.current!.blur();
                 }
-              }}
-              onKeyPress={(e) => {
                 if (e.key === "Enter") {
                   // update
                   inputRef.current!.blur();
@@ -213,8 +212,6 @@ function ShoppingListItem(
           x
         </button>
       </div>
-      {childrenItems}
-
       <div
         class={tw`${indent} border-none! leading-[0]`}
       >
@@ -223,14 +220,17 @@ function ShoppingListItem(
           onDrop={(itemToMove: string, id: string) => {
             move(itemToMove, id);
           }}
+          width="10%"
         />
         <DropArea
+          width="90%"
           id={id}
           onDrop={(itemToMove: string, id: string) => {
             moveAfterParent(itemToMove, id);
           }}
         />
       </div>
+      {childrenItems}
     </Fragment>
   );
 }
@@ -246,6 +246,12 @@ function NewShoppingListItem(
         ref={inputRef}
         class={tw`flex-grow-1 border-b-1 border-solid`}
         type="text"
+        onKeyPress={(e) => {
+          if (e.key === "Enter") {
+            onClick(inputRef?.current?.value);
+            inputRef!.current!.value = "";
+          }
+        }}
       />
       <button
         class={tw`p-1 rounded hover:bg-gray-200`}
@@ -268,13 +274,12 @@ export interface ListItem {
 }
 
 export default function ShoppingList(
-  { initialItems }: { initialItems: ListItem[] },
+  { listId, initialItems }: { listId: string; initialItems: ListItem[] },
 ) {
   const [items, setItems] = useState(initialItems || []);
 
   const reload = async () => {
-    const id = "1";
-    const response = await fetch(`/api/list/${id}/item`);
+    const response = await fetch(`/api/list/${listId}/item`);
     setItems(await response.json() as unknown as ListItem[]);
   };
 
@@ -282,23 +287,35 @@ export default function ShoppingList(
     if (!IS_BROWSER) {
       return;
     }
-    let loc = window.location, newUri;
-    if (loc.protocol === "https:") {
-      newUri = "wss:";
-    } else {
-      newUri = "ws:";
+    function connect() {
+      let loc = window.location, newUri;
+      if (loc.protocol === "https:") {
+        newUri = "wss:";
+      } else {
+        newUri = "ws:";
+      }
+      newUri += "//" + loc.host + "/api/ws";
+      const ws = new WebSocket(newUri);
+      ws.onmessage = (e) => {
+        reload();
+      };
+      ws.onerror = (e) => {
+        // Try to reconnect in 5 seconds
+        console.log("ws encountered error, reconnecting in 5 seconds")
+        setTimeout(connect, 5000);
+      };
+      ws.onclose = (e) => {
+        // Try to reconnect in 5 seconds
+        console.log("ws closed, reconnecting in 5 seconds")
+        setTimeout(connect, 5000);
+      };
     }
-    newUri += "//" + loc.host;
-    newUri += loc.pathname + "api/ws";
-    const ws = new WebSocket(newUri);
-    ws.onmessage = (e) => {
-      reload();
-    };
+
+    connect();
   }, []);
 
   const addItem = async (value: string) => {
-    const id = "1";
-    const response = await fetch(`/api/list/${id}/item`, {
+    const response = await fetch(`/api/list/${listId}/item`, {
       method: "POST",
       body: JSON.stringify({
         text: value,
@@ -311,7 +328,6 @@ export default function ShoppingList(
   };
 
   const updateItemChecked = async (itemId: string, checked: boolean) => {
-    const listId = "1";
     const response = await fetch(`/api/list/${listId}/item/${itemId}/checked`, {
       method: "PUT",
       body: JSON.stringify({
@@ -325,7 +341,6 @@ export default function ShoppingList(
   };
 
   const deleteItem = async (itemId: string) => {
-    const listId = "1";
     const response = await fetch(`/api/list/${listId}/item/${itemId}`, {
       method: "DELETE",
     });
@@ -349,15 +364,17 @@ export default function ShoppingList(
   }, [items]);
 
   return (
-    <div class={tw`divide-y divide-solid`}>
-      {shoppingListItems}
-      <NewShoppingListItem
-        onClick={(value) => {
-          if (value) {
-            addItem(value);
-          }
-        }}
-      />
-    </div>
+    <ListIdContext.Provider value={listId}>
+      <div class={tw`divide-y divide-solid`}>
+        {shoppingListItems}
+        <NewShoppingListItem
+          onClick={(value) => {
+            if (value) {
+              addItem(value);
+            }
+          }}
+        />
+      </div>
+    </ListIdContext.Provider>
   );
 }

@@ -70,7 +70,7 @@ export interface List {
 
 export function getLists(): List[] {
   const rows = db.queryEntries<{ id: string; status: string; date: string }>(
-    "SELECT id, status, date FROM lists",
+    "SELECT id, status, date FROM lists order by date desc",
   );
   return rows.map((row) => {
     return {
@@ -81,6 +81,39 @@ export function getLists(): List[] {
       date: new Date(row.date),
     };
   });
+}
+
+export function getList(listId: string): List | undefined {
+  const rows = db.queryEntries<{ id: string; status: string; date: string }>(
+    "SELECT id, status, date FROM lists WHERE id = ?",
+    [listId],
+  );
+  return rows.map((row) => {
+    return {
+      ...row,
+      status: ["todo", "inprogress", "done"].includes(row.status)
+        ? row.status as "todo" | "inprogress" | "done"
+        : "todo",
+      date: new Date(row.date),
+    };
+  }).at(0);
+}
+
+export function createList(
+  date: Date = new Date(),
+  status: "todo" | "inprogress" | "done" = "todo",
+) {
+  const id = crypto.randomUUID();
+  const row = db.query(
+    "INSERT INTO lists (id, date, status) VALUES (?, ?, ?)",
+    [
+      id,
+      date,
+      status,
+    ],
+  );
+  console.log(row);
+  return id;
 }
 
 export interface Item {
@@ -268,4 +301,12 @@ export function updateItem(itemId: string, changes: { text?: string }) {
 
 export function deleteItem(itemId: string) {
   return db.query("DELETE FROM items WHERE id = ?", [itemId]);
+}
+
+export function updateListStatus(listId: string, status: string) {
+  const result = db.query("UPDATE lists SET status = ? WHERE id = ?", [
+    status,
+    listId,
+  ]);
+  return result;
 }

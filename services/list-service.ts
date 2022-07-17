@@ -4,7 +4,32 @@ import { eventHub } from "./hub.ts";
 
 class ListService {
   getLists() {
-    return db.getLists()
+    return db.getLists();
+  }
+
+  getList(listId: string) {
+    return db.getList(listId);
+  }
+
+  updateListStatus(listId: string, status: string) {
+    if (!["inprogress", "todo", "done"].includes(status)) {
+      throw Error("wupsidaisy");
+    }
+    db.updateListStatus(listId, status);
+    eventHub.sendToClients(JSON.stringify({ type: "updateListStatus" }));
+  }
+
+  addList() {
+    return db.createList();
+  }
+
+  getActiveList() {
+    // TODO: realize this in sql -> blocker? can we get the latest list reliable with sqlite?
+    return db.getLists().filter((list) => {
+      return list.status !== "done";
+    }).sort((listA, listB) => {
+      return listB.date.getTime() - listA.date.getTime();
+    }).at(0);
   }
 
   getItems(id: string) {
@@ -37,7 +62,7 @@ class ListService {
   putItem({ listId, text }: { listId: string; text: string }) {
     console.log(text);
     const item = db.getLastItem(listId);
-    const [numerator, denominator] = item.sortFractions;
+    const [numerator, denominator] = item?.sortFractions || [0, 1];
 
     // to find the next slot, "add" 1/0
     const newId = db.createItem(
@@ -84,6 +109,7 @@ class ListService {
 
     let after: db.Item | undefined;
     let before: db.Item | undefined;
+    let parent: string | undefined = item.parent;
     if (moveOperation.after) {
       console.log(listItems);
       listItems.filter((listItem) => listItem.parent === item.parent)
@@ -105,14 +131,20 @@ class ListService {
       if (before?.id === item.id) {
         before = undefined;
       }
+    } else if (moveOperation.parent) {
+      // if just a parent is specified, move the item before it's first child
+      before = listItems.filter((listItem) =>
+        listItem.parent === moveOperation.parent
+      )
+        .at(0);
     }
     console.log("after is", after);
     console.log("before is", before);
 
     if (moveOperation.parent && moveOperation.parent !== item.id) {
-      item.parent = moveOperation.parent;
+      parent = moveOperation.parent;
     } else if (after && after.parent !== item?.parent) {
-      item.parent = after?.parent;
+      parent = after?.parent;
     }
 
     item.sortFractions = [
@@ -120,7 +152,7 @@ class ListService {
       (after?.sortFractions[1] || 1) + (before?.sortFractions[1] || 0),
     ];
     console.log("updateItemMove with ", item);
-    db.updateItemMove(item.id, item.parent, item.sortFractions);
+    db.updateItemMove(item.id, parent, item.sortFractions);
     eventHub.sendToClients(JSON.stringify({ type: "moveItem", id: itemId }));
   }
 }
