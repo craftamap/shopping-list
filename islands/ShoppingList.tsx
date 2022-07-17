@@ -145,7 +145,7 @@ function ShoppingListItem(
           <input
             type="checkbox"
             checked={checked}
-            class={tw`mr-1`}
+            class={tw`mr-1 accent-violet-700`}
             onClick={(e) => {
               e.preventDefault();
               onChecked(id, e.currentTarget.checked);
@@ -202,8 +202,8 @@ function ShoppingListItem(
               }}
             />
           )}
-          <span class={tw`text-xs`}>( {id.substring(0, 4)} ,</span>
-          <span class={tw`text-xs text-purple-500`}>{sort} )</span>
+          {false && <span class={tw`text-xs`}>( {id.substring(0, 4)} ,</span>}
+          {false && <span class={tw`text-xs text-purple-500`}>{sort} )</span>}
         </label>
         <button
           class={tw`p-1 rounded hover:bg-gray-200`}

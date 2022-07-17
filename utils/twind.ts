@@ -5,4 +5,6 @@ export const config: Configuration = {
   darkMode: "class",
   mode: "silent",
 };
-if (IS_BROWSER) setup(config);
+if (IS_BROWSER) {
+  setup(config);
+}

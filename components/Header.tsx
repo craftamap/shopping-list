@@ -1,5 +1,6 @@
 /** @jsx h */
-import { h } from "preact";
+import { Head } from "https://deno.land/x/fresh@1.0.1/runtime.ts";
+import { Fragment, h } from "preact";
 import { tw } from "../utils/twind.ts";
 
 export default function Header(
@@ -9,12 +10,18 @@ export default function Header(
   if (backlinkUrl) {
     backlink = <a href={backlinkUrl} class={tw`pr-1`}>&lt;</a>;
   }
+
   return (
-    <header class={tw`py-4 px-2  shadow-lg`}>
-      <div class={tw`max-w-screen-md mx-auto`}>
+    <Fragment>
+      <Head>
         <title>{title}</title>
-        <h1 class={tw`text-xl font-bold`}>{backlink}{title}</h1>
-      </div>
-    </header>
+        <link rel="manifest" href="/manifest.json" />
+      </Head>
+      <header class={tw`py-4 px-2  shadow-lg`}>
+        <div class={tw`max-w-screen-md mx-auto`}>
+          <h1 class={tw`text-xl font-bold`}>{backlink}{title}</h1>
+        </div>
+      </header>
+    </Fragment>
   );
 }
