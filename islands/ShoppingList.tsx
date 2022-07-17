@@ -306,7 +306,7 @@ export default function ShoppingList(
       };
       ws.onclose = (e) => {
         // Try to reconnect in 5 seconds
-        console.log("ws closed, reconnecting in 5 seconds")
+        console.log("ws , reconnecting in 5 seconds")
         setTimeout(connect, 5000);
       };
     }

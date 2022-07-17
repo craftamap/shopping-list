@@ -1,5 +1,6 @@
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
 import { v4 as uuidV4 } from "https://deno.land/std@0.144.0/uuid/mod.ts";
+import * as logger from "https://deno.land/std/log/mod.ts";
 
 const db = new DB("db.sqlite");
 
@@ -60,6 +61,25 @@ createTable(
     sortFractions: ["BLOB", "NOT NULL"],
   },
   [["list", "lists (id)"], ["parent", "items (id)"]],
+);
+
+createTable(
+  "sessions",
+  {
+    id: ["text", "PRIMARY KEY", "NOT NULL"],
+    data: ["text", "NOT NULL"],
+  },
+  [],
+);
+
+createTable(
+  "users",
+  {
+    id: ["text", "PRIMARY KEY", "NOT NULL"],
+    username: ["text", "UNIQUE", "NOT NULL"],
+    passwordHash: ["text", "NOT NULL"],
+  },
+  [],
 );
 
 export interface List {
@@ -309,4 +329,45 @@ export function updateListStatus(listId: string, status: string) {
     listId,
   ]);
   return result;
+}
+
+export function sessionExists(id: string) {
+  const results = db.queryEntries<{ count: number }>(
+    "SELECT COUNT(id) as count FROM sessions WHERE id = ?",
+    [id],
+  );
+  logger.info(["sessionExists ", results]);
+  return results.at(0)?.count === 1;
+}
+
+export function getSessionById(id: string) {
+  const results = db.queryEntries<{ id: string; data: string }>(
+    "SELECT id, data FROM sessions WHERE id = ?",
+    [id],
+  );
+  return results.at(0);
+}
+
+export function createSession(id: string, data: string) {
+  const result = db.query("INSERT INTO sessions (id, data) VALUES (?, ?)", [
+    id,
+    data,
+  ]);
+}
+
+export function updateSession(id: string, data: string) {
+  const result = db.query("UPDATE sessions SET data = ? WHERE id = ?", [
+    data,
+    id,
+  ]);
+}
+
+export function getUserByUsername(username: string) {
+  const results = db.queryEntries<
+    { id: string; username: string; passwordHash: string }
+  >(
+    "SELECT id, username, passwordHash FROM users WHERE username = ?",
+    [username],
+  );
+  return results.at(0);
 }

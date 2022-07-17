@@ -3,18 +3,22 @@
 // This file is automatically updated during development when running `dev.ts`.
 
 import * as $0 from "./routes/[name].tsx";
-import * as $1 from "./routes/api/list/[listid]/index.ts";
-import * as $2 from "./routes/api/list/[listid]/item/[itemid]/checked.ts";
-import * as $3 from "./routes/api/list/[listid]/item/[itemid]/index.ts";
-import * as $4 from "./routes/api/list/[listid]/item/[itemid]/move.ts";
-import * as $5 from "./routes/api/list/[listid]/item/index.ts";
-import * as $6 from "./routes/api/list/[listid]/status.ts";
-import * as $7 from "./routes/api/list/index.tsx";
-import * as $8 from "./routes/api/ws.ts";
-import * as $9 from "./routes/index.tsx";
-import * as $10 from "./routes/list/[listId].tsx";
-import * as $11 from "./routes/list/add.tsx";
-import * as $12 from "./routes/list/index.tsx";
+import * as $1 from "./routes/_middleware.ts";
+import * as $2 from "./routes/api/_middleware.ts";
+import * as $3 from "./routes/api/list/[listid]/index.ts";
+import * as $4 from "./routes/api/list/[listid]/item/[itemid]/checked.ts";
+import * as $5 from "./routes/api/list/[listid]/item/[itemid]/index.ts";
+import * as $6 from "./routes/api/list/[listid]/item/[itemid]/move.ts";
+import * as $7 from "./routes/api/list/[listid]/item/index.ts";
+import * as $8 from "./routes/api/list/[listid]/status.ts";
+import * as $9 from "./routes/api/list/index.tsx";
+import * as $10 from "./routes/api/ws.ts";
+import * as $11 from "./routes/index.tsx";
+import * as $12 from "./routes/list/[listId].tsx";
+import * as $13 from "./routes/list/_middleware.ts";
+import * as $14 from "./routes/list/add.tsx";
+import * as $15 from "./routes/list/index.tsx";
+import * as $16 from "./routes/login.tsx";
 import * as $$0 from "./islands/Counter.tsx";
 import * as $$1 from "./islands/ShoppingList.tsx";
 import * as $$2 from "./islands/Status.tsx";
@@ -22,18 +26,22 @@ import * as $$2 from "./islands/Status.tsx";
 const manifest = {
   routes: {
     "./routes/[name].tsx": $0,
-    "./routes/api/list/[listid]/index.ts": $1,
-    "./routes/api/list/[listid]/item/[itemid]/checked.ts": $2,
-    "./routes/api/list/[listid]/item/[itemid]/index.ts": $3,
-    "./routes/api/list/[listid]/item/[itemid]/move.ts": $4,
-    "./routes/api/list/[listid]/item/index.ts": $5,
-    "./routes/api/list/[listid]/status.ts": $6,
-    "./routes/api/list/index.tsx": $7,
-    "./routes/api/ws.ts": $8,
-    "./routes/index.tsx": $9,
-    "./routes/list/[listId].tsx": $10,
-    "./routes/list/add.tsx": $11,
-    "./routes/list/index.tsx": $12,
+    "./routes/_middleware.ts": $1,
+    "./routes/api/_middleware.ts": $2,
+    "./routes/api/list/[listid]/index.ts": $3,
+    "./routes/api/list/[listid]/item/[itemid]/checked.ts": $4,
+    "./routes/api/list/[listid]/item/[itemid]/index.ts": $5,
+    "./routes/api/list/[listid]/item/[itemid]/move.ts": $6,
+    "./routes/api/list/[listid]/item/index.ts": $7,
+    "./routes/api/list/[listid]/status.ts": $8,
+    "./routes/api/list/index.tsx": $9,
+    "./routes/api/ws.ts": $10,
+    "./routes/index.tsx": $11,
+    "./routes/list/[listId].tsx": $12,
+    "./routes/list/_middleware.ts": $13,
+    "./routes/list/add.tsx": $14,
+    "./routes/list/index.tsx": $15,
+    "./routes/login.tsx": $16,
   },
   islands: {
     "./islands/Counter.tsx": $$0,
