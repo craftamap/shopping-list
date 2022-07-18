@@ -30,7 +30,10 @@ export default function ListId(props: PageProps<ListIdData>) {
         backlinkUrl="/list"
       />
       <Main>
-        <ShoppingList listId={props.data.list.id} initialItems={props.data.items} />
+        <ShoppingList
+          listId={props.data.list.id}
+          initialItems={props.data.items}
+        />
       </Main>
     </Root>
   );
