@@ -9,7 +9,11 @@ import { tw } from "@twind";
 const ListIdContext = createContext("");
 
 function DropArea(
-  { id, onDrop, width }: { id: string; onDrop: Function; width?: string },
+  { id, onDrop, width }: {
+    id: string;
+    onDrop: (item: string, id: string) => void;
+    width?: string;
+  },
 ) {
   const [dropAreaHovered, setDropAreaHovered] = useState<boolean>(false);
 
@@ -288,7 +292,8 @@ export default function ShoppingList(
       return;
     }
     function connect() {
-      let loc = window.location, newUri;
+      const loc = window.location;
+      let newUri;
       if (loc.protocol === "https:") {
         newUri = "wss:";
       } else {
@@ -301,12 +306,12 @@ export default function ShoppingList(
       };
       ws.onerror = (e) => {
         // Try to reconnect in 5 seconds
-        console.log("ws encountered error, reconnecting in 5 seconds")
+        console.log("ws encountered error, reconnecting in 5 seconds");
         setTimeout(connect, 5000);
       };
       ws.onclose = (e) => {
         // Try to reconnect in 5 seconds
-        console.log("ws , reconnecting in 5 seconds")
+        console.log("ws , reconnecting in 5 seconds");
         setTimeout(connect, 5000);
       };
     }

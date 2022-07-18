@@ -1,4 +1,4 @@
-import { HandlerContext, Handlers } from "$fresh/server.ts";
+import { Handlers } from "$fresh/server.ts";
 import { listService } from "../../../../../../services/list-service.ts";
 
 export const handler: Handlers = {
@@ -13,6 +13,7 @@ export const handler: Handlers = {
     const itemId = ctx.params.itemid;
     const data = await req.json();
     const newId = listService.updateItem(itemId, { text: data?.text });
+    console.log("newId", newId);
     return new Response(JSON.stringify(listService.getItems(listId)));
   },
 };

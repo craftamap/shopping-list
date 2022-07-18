@@ -353,6 +353,7 @@ export function createSession(id: string, data: string) {
     id,
     data,
   ]);
+  return result;
 }
 
 export function updateSession(id: string, data: string) {
@@ -360,6 +361,7 @@ export function updateSession(id: string, data: string) {
     data,
     id,
   ]);
+  return result;
 }
 
 export function getUserByUsername(username: string) {

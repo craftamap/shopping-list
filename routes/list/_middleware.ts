@@ -3,7 +3,7 @@ import { authMiddleware } from "../../middleware/auth.ts";
 
 export async function handler(
   req: Request,
-  ctx: MiddlewareHandlerContext<any>,
+  ctx: MiddlewareHandlerContext<unknown>,
 ) {
   return await authMiddleware(req, ctx);
 }

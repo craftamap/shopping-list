@@ -1,13 +1,9 @@
 import { MiddlewareHandlerContext } from "$fresh/server.ts";
-import { SessionState } from "./session.ts";
-
-export type AuthState = SessionState & {
-  userId: string;
-};
+import { MiddlewareState } from "./MiddlewareState.ts";
 
 export async function authMiddleware(
   req: Request,
-  ctx: MiddlewareHandlerContext<AuthState>,
+  ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
   console.log(new URL(req.url).pathname);
   console.log("authState", ctx.state);

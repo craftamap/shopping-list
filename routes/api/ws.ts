@@ -1,8 +1,8 @@
-import { HandlerContext, Handlers } from "$fresh/server.ts";
+import { Handlers } from "$fresh/server.ts";
 import { eventHub } from "../../services/hub.ts";
 
 export const handler: Handlers = {
-  GET(req, ctx) {
+  GET(req, _ctx) {
     const { socket, response } = Deno.upgradeWebSocket(req);
     socket.onopen = (e) => {
       console.log("new ws connection", e);
@@ -13,7 +13,7 @@ export const handler: Handlers = {
     };
     socket.onclose = (_) => {
       eventHub.removeSocket(socket);
-    }
+    };
 
     return response;
   },

@@ -7,8 +7,9 @@ import Main from "../components/Main.tsx";
 import { tw } from "../utils/twind.ts";
 import * as db from "../db/index.ts";
 import { hash, verify } from "https://deno.land/x/scrypt/mod.ts";
+import { MiddlewareState } from "../middleware/MiddlewareState.ts";
 
-export const handler: Handlers = {
+export const handler: Handlers<unknown, MiddlewareState> = {
   async POST(_req, ctx) {
     const formData = await _req.formData();
     console.log("formData", formData);
@@ -24,12 +25,12 @@ export const handler: Handlers = {
     }
 
     // TODO: password check
-    (ctx.state.session as any).set("userId", user?.id);
+    ctx.state.session.set("userId", user?.id);
     return Response.redirect(new URL("/", _req.url));
   },
 };
 
-export default function Greet(props: PageProps) {
+export default function Greet(_props: PageProps) {
   return (
     <Root>
       <Header

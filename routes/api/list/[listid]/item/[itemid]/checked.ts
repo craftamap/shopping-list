@@ -1,4 +1,4 @@
-import { HandlerContext, Handlers } from "$fresh/server.ts";
+import { Handlers } from "$fresh/server.ts";
 import { listService } from "../../../../../../services/list-service.ts";
 
 export const handler: Handlers = {

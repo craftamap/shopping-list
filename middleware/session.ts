@@ -4,10 +4,7 @@ import {
   getCookies,
   setCookie,
 } from "https://deno.land/std@0.148.0/http/cookie.ts"; // TODO: move to import map
-
-export interface SessionState {
-  session: Session;
-}
+import { MiddlewareState } from "./MiddlewareState.ts";
 
 // TODO: sessions should expire?
 export class Session {
@@ -47,7 +44,7 @@ export class Session {
 
 export async function sessionMiddleware(
   req: Request,
-  ctx: MiddlewareHandlerContext<SessionState>,
+  ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
   const { sid } = getCookies(req.headers);
   console.log("sid", sid);

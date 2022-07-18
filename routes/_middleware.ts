@@ -1,10 +1,10 @@
 import { MiddlewareHandlerContext } from "$fresh/server.ts";
-import { authMiddleware } from "../middleware/auth.ts";
+import { MiddlewareState } from "../middleware/MiddlewareState.ts";
 import { sessionMiddleware } from "../middleware/session.ts";
 
 export async function handler(
   req: Request,
-  ctx: MiddlewareHandlerContext<any>,
+  ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
   return await sessionMiddleware(req, ctx);
 }
