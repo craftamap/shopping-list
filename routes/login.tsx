@@ -12,7 +12,6 @@ import { MiddlewareState } from "../middleware/MiddlewareState.ts";
 export const handler: Handlers<unknown, MiddlewareState> = {
   async POST(_req, ctx) {
     const formData = await _req.formData();
-    console.log("formData", formData);
     const username = formData.get("username")?.valueOf()! as string;
     const password = formData.get("password")?.valueOf()! as string;
     const user = db.getUserByUsername(username);
@@ -21,10 +20,10 @@ export const handler: Handlers<unknown, MiddlewareState> = {
     }
     const matches = verify(password, user?.passwordHash!);
     if (!matches) {
+      console.log("password does not match!")
       return Response.redirect(new URL("/login", _req.url));
     }
 
-    // TODO: password check
     ctx.state.session.set("userId", user?.id);
     return Response.redirect(new URL("/", _req.url));
   },
