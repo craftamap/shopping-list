@@ -6,6 +6,13 @@ import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 import { tw } from "@twind";
 
+function urlify(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlRegex, (url) => {
+    return `<a href="${url}">${url}</a>`;
+  });
+}
+
 const ListIdContext = createContext("");
 
 function DropArea(
@@ -127,6 +134,12 @@ function ShoppingListItem(
     });
   };
 
+  const urlifiedText = urlify(
+    text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(
+      ">",
+      "&gt;",
+    ).replaceAll('"', "&quot;").replaceAll("'", "&#039;"),
+  );
   return (
     <Fragment>
       <div
@@ -157,15 +170,16 @@ function ShoppingListItem(
           />
           {!asInput && (
             <span
-              class={tw`min-w-[4em]`}
+              class={tw`min-w-[4em] flex-grow-1 item--text`}
               onClick={(e) => {
+                if ((e.target as HTMLElement).tagName !== "SPAN") {
+                  return;
+                }
                 e.preventDefault();
-                e.stopPropagation();
                 setAsInput(true);
               }}
-            >
-              {text}
-            </span>
+              dangerouslySetInnerHTML={{ __html: urlifiedText }}
+            />
           )}
           {asInput && (
             <input
