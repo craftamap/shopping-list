@@ -43,6 +43,26 @@ function createTable(
   );
 }
 
+function columnExists(tableName: string, columnName: string) {
+  const result = db.queryEntries<{ count: number }>(
+    `SELECT count(*) as count FROM pragma_table_info('${tableName}') where name = '${columnName}';`,
+  );
+  return (result.at(0)?.count == 1);
+}
+
+function alterTableAddColumn(tableName: string, column: [string, string[]]) {
+  if (columnExists(tableName, column[0])) {
+    console.warn(
+      `${column[0]} already exists in ${tableName}, skipping altering`,
+    );
+    return;
+  }
+
+  const columnDeclaration = `${column[0]} ${column[1].join(" ")}`;
+
+  db.execute(`ALTER TABLE ${tableName} ADD ${columnDeclaration}`);
+}
+
 createTable("lists", {
   id: ["text", "PRIMARY KEY", "NOT NULL"],
   status: ["text", "NOT NULL", 'DEFAULT "todo"'],
@@ -71,6 +91,12 @@ createTable(
   },
   [],
 );
+
+alterTableAddColumn("sessions", ["expiresAt", [
+  "text",
+  "NOT NULL",
+  'DEFAULT ""',
+]]);
 
 createTable(
   "users",
@@ -348,11 +374,23 @@ export function getSessionById(id: string) {
   return results.at(0);
 }
 
-export function createSession(id: string, data: string) {
-  const result = db.query("INSERT INTO sessions (id, data) VALUES (?, ?)", [
-    id,
-    data,
-  ]);
+export function getSessionExpiresAt(id: string) {
+  const results = db.queryEntries<{ expiresAt: string }>(
+    "SELECT expiresAt FROM sessions WHERE id = ?",
+    [id],
+  );
+  return results.at(0);
+}
+
+export function createSession(id: string, data: string, expiresAt: Date) {
+  const result = db.query(
+    "INSERT INTO sessions (id, data, expiresAt) VALUES (?, ?, ?)",
+    [
+      id,
+      data,
+      expiresAt,
+    ],
+  );
   return result;
 }
 
