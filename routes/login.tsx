@@ -20,7 +20,7 @@ export const handler: Handlers<unknown, MiddlewareState> = {
     }
     const matches = verify(password, user?.passwordHash!);
     if (!matches) {
-      console.log("password does not match!")
+      console.log("password does not match!");
       return Response.redirect(new URL("/login", _req.url));
     }
 

@@ -36,8 +36,7 @@ export default function List(props: PageProps<ListType[]>) {
         {shoppingLists}
         <div class={tw`fixed bottom-6 right-6`}>
           <a
-            class={tw
-              `p-2 bg-green-500 text-white display-block aspect-square rounded-full`}
+            class={tw`p-2 bg-green-500 text-white display-block aspect-square rounded-full`}
             href="/list/add"
           >
             +
