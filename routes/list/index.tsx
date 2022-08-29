@@ -22,7 +22,7 @@ export default function List(props: PageProps<ListType[]>) {
     return (
       <div class={tw`flex items-center p-1`}>
         <a href={`/list/${list.id}`} class={tw`flex-grow`}>
-          {list.date.toLocaleString()} ({list.id})
+          {list.date.toLocaleString()}
         </a>
         <Status initialList={list} />
       </div>
