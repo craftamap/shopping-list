@@ -1,5 +1,6 @@
 import * as db from "../db/index.ts";
 import { ListItem } from "../islands/ShoppingList.tsx";
+import Log from "../log.ts";
 import { eventHub } from "./hub.ts";
 
 class ListService {
@@ -34,7 +35,7 @@ class ListService {
 
   getItems(id: string) {
     const items = db.getItems(id);
-    console.log("getItems from db", items);
+    Log.info("getItems from db", items);
 
     const finalItems = [];
     const itemMap = new Map<string, db.Item & ListItem>();
@@ -55,12 +56,12 @@ class ListService {
         finalItems.push(item);
       }
     }
-    console.log(finalItems);
+    Log.info(finalItems);
     return finalItems;
   }
 
   putItem({ listId, text }: { listId: string; text: string }) {
-    console.log(text);
+    Log.info(text);
     const item = db.getLastItem(listId);
     const [numerator, denominator] = item?.sortFractions || [0, 1];
 
@@ -102,7 +103,7 @@ class ListService {
     );
   }
   moveItem(itemId: string, moveOperation: MoveOperation) {
-    console.log("moveOperation", moveOperation);
+    Log.info("moveOperation", moveOperation);
     const item = db.getItem(itemId);
     const listId = item.list;
     const listItems = db.getItems(listId);
@@ -111,7 +112,7 @@ class ListService {
     let before: db.Item | undefined;
     let parent: string | undefined = item.parent;
     if (moveOperation.after) {
-      console.log(listItems);
+      Log.info(listItems);
       listItems.filter((listItem) => listItem.parent === item.parent)
         .forEach((listItem, idx, listItems) => {
           if (listItem.id === moveOperation.after) {
@@ -138,8 +139,8 @@ class ListService {
       )
         .at(0);
     }
-    console.log("after is", after);
-    console.log("before is", before);
+    Log.info("after is", after);
+    Log.info("before is", before);
 
     if (moveOperation.parent && moveOperation.parent !== item.id) {
       parent = moveOperation.parent;
@@ -151,7 +152,7 @@ class ListService {
       (after?.sortFractions[0] || 0) + (before?.sortFractions[0] || 1),
       (after?.sortFractions[1] || 1) + (before?.sortFractions[1] || 0),
     ];
-    console.log("updateItemMove with ", item);
+    Log.info("updateItemMove with ", item);
     db.updateItemMove(item.id, parent, item.sortFractions);
     eventHub.sendToClients(JSON.stringify({ type: "moveItem", id: itemId }));
   }

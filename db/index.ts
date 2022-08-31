@@ -1,6 +1,6 @@
 import { DB } from "https://deno.land/x/sqlite/mod.ts";
 import { v4 as uuidV4 } from "https://deno.land/std@0.144.0/uuid/mod.ts";
-import * as logger from "https://deno.land/std/log/mod.ts";
+import Log from "../log.ts";
 
 const db = new DB("db.sqlite");
 
@@ -20,7 +20,7 @@ function createTable(
 ) {
   const exists = tableExists(tableName);
   if (exists && !options?.drop) {
-    console.log(`table ${tableName} already exists; skipping creation`);
+    Log.warn(`table ${tableName} already exists; skipping creation`);
     return;
   } else if (exists) {
     db.execute(`DROP table ${tableName};`);
@@ -36,7 +36,7 @@ function createTable(
 
   const query =
     `CREATE TABLE ${tableName} (${columnDeclarations} ${foreignKeysDeclarations});`;
-  console.log(query);
+  Log.info(query);
 
   db.execute(
     query,
@@ -132,7 +132,7 @@ export function createList(
       status,
     ],
   );
-  console.log(row);
+  Log.info(row);
   return id;
 }
 
@@ -167,7 +167,7 @@ export function getItems(listId?: string): Item[] {
     );
   }
   return rows.map((row) => {
-    console.log(row);
+    Log.info(row);
     const numbers = new Uint32Array(row.sortFractions.buffer);
     return {
       ...row,
@@ -191,7 +191,7 @@ export function getLastItem(listId: string): Item {
     "SELECT id, text, checked, list, parent, sortFractions, sort FROM items WHERE list = ? order by sort desc limit 1",
     [listId],
   );
-  console.log(listId, rows);
+  Log.info(listId, rows);
   return rows.map((row) => {
     const numbers = new Uint32Array(row.sortFractions.buffer);
     return {
@@ -244,7 +244,7 @@ export function createItem(
       sort,
     ],
   );
-  console.log(row);
+  Log.info(row);
   return id;
 }
 
@@ -265,7 +265,7 @@ export function updateItemChecked(
     "UPDATE items SET checked = ? WHERE id = ?",
     [checked, itemId],
   );
-  console.log(rows);
+  Log.info(rows);
   return rows.map((row) => {
     const numbers = new Uint32Array(row.sortFractions.buffer);
     return {
@@ -288,7 +288,7 @@ export function updateItemMove(
         "UPDATE items SET parent = ? WHERE id = ?",
         [parentId, itemId],
       );
-      console.log("update parent", result);
+      Log.info("update parent", result);
     }
     if (sortFractions) {
       const result = db.query(
@@ -299,7 +299,7 @@ export function updateItemMove(
           itemId,
         ],
       );
-      console.log("update sort", result);
+      Log.info("update sort", result);
     }
   });
 }
@@ -314,7 +314,7 @@ export function updateItem(itemId: string, changes: { text?: string }) {
           itemId,
         ],
       );
-      console.log(result);
+      Log.info(result);
     }
   });
 }
@@ -336,7 +336,7 @@ export function sessionExists(id: string) {
     "SELECT COUNT(id) as count FROM sessions WHERE id = ?",
     [id],
   );
-  logger.info(["sessionExists ", results]);
+  Log.info(["sessionExists ", results]);
   return results.at(0)?.count === 1;
 }
 

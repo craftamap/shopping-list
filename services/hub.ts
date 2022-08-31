@@ -1,14 +1,16 @@
+import Log from "../log.ts";
+
 class EventHub {
   #sockets = new Set<WebSocket>();
 
   addSocket(socket: WebSocket) {
     this.#sockets.add(socket);
-    console.log(this.#sockets);
+    Log.info(this.#sockets);
   }
 
   removeSocket(socket: WebSocket) {
     this.#sockets.delete(socket);
-    console.log(this.#sockets);
+    Log.info(this.#sockets);
   }
 
   sendToClients(event: string) {

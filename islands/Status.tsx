@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "preact/hooks";
 import { tw } from "@twind";
 import "preact/debug";
 import { List } from "../db/index.ts";
+import Log from "../log.ts";
 
 export default function Status({ initialList }: { initialList: List }) {
   const [list, setList] = useState(initialList);
@@ -30,7 +31,7 @@ export default function Status({ initialList }: { initialList: List }) {
   }, [list]);
 
   const onClick = useCallback(() => {
-    console.log(list);
+    Log.info(list);
     if (list.status === "todo") {
       updateListStatus("inprogress");
     } else if (list.status === "inprogress") {

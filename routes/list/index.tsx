@@ -8,6 +8,7 @@ import { listService } from "../../services/list-service.ts";
 import { List as ListType } from "../../db/index.ts";
 import { tw } from "../../utils/twind.ts";
 import Status from "../../islands/Status.tsx";
+import Log from "../../log.ts";
 
 export const handler: Handlers<ListType[]> = {
   GET(_req, ctx) {
@@ -18,7 +19,7 @@ export const handler: Handlers<ListType[]> = {
 
 export default function List(props: PageProps<ListType[]>) {
   const shoppingLists = props.data.map((list) => {
-    console.log(list.date);
+    Log.info(list.date);
     return (
       <div class={tw`flex items-center p-1`}>
         <a href={`/list/${list.id}`} class={tw`flex-grow`}>
