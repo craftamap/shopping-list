@@ -5,6 +5,7 @@ import { createContext, Fragment, h } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 import { tw } from "@twind";
+import Log from "../log.ts";
 
 function urlify(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -39,7 +40,7 @@ function DropArea(
       }}
       onDragOver={(e) => {
         e.preventDefault();
-        console.log(e);
+        Log.info(e);
       }}
       onDrop={(e) => {
         e.preventDefault();
@@ -89,11 +90,11 @@ function ShoppingListItem(
 
   useEffect(() => {
     if (asInput && inputRef.current) {
-      console.log("focus");
+      Log.info("focus");
       inputRef.current.focus();
     }
   }, [asInput]);
-  console.log(listId);
+  Log.info(listId);
 
   const move = (id: string, after: string) => {
     fetch(`/api/list/${listId}/item/${id}/move`, {
@@ -148,7 +149,7 @@ function ShoppingListItem(
         class={tw`${indent} flex py-2 items-center `}
         draggable
         onDragStart={(e) => {
-          console.log(e);
+          Log.info(e);
           e.dataTransfer!.effectAllowed = "move";
           e.dataTransfer?.setData("text/plain", id);
         }}
@@ -320,12 +321,12 @@ export default function ShoppingList(
       };
       ws.onerror = (e) => {
         // Try to reconnect in 5 seconds
-        console.log("ws encountered error, reconnecting in 5 seconds");
+        Log.info("ws encountered error, reconnecting in 5 seconds");
         setTimeout(connect, 5000);
       };
       ws.onclose = (e) => {
         // Try to reconnect in 5 seconds
-        console.log("ws , reconnecting in 5 seconds");
+        Log.info("ws , reconnecting in 5 seconds");
         setTimeout(connect, 5000);
       };
     }

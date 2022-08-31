@@ -5,6 +5,7 @@ import {
   setCookie,
 } from "https://deno.land/std@0.148.0/http/cookie.ts"; // TODO: move to import map
 import { MiddlewareState } from "./MiddlewareState.ts";
+import Log from "../log.ts";
 
 // TODO: sessions should expire?
 export class Session {
@@ -47,16 +48,16 @@ export async function sessionMiddleware(
   ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
   const { sid } = getCookies(req.headers);
-  console.log("sid", sid);
+  Log.info("sid", sid);
   let newSid;
   if (sid && Session.sessionExists(sid)) {
     ctx.state.session = Session.getSession(sid)!;
   } else {
-    console.log("no sid");
+    Log.info("no sid");
     const newSession = Session.createSession();
     ctx.state.session = newSession;
     newSid = ctx.state.session.id;
-    console.log("newSid", newSid);
+    Log.info("newSid", newSid);
   }
   const res = await ctx.next();
   if (newSid) {
@@ -68,7 +69,7 @@ export async function sessionMiddleware(
         httpOnly: true,
       });
     } catch (e) {
-      console.log(e, req);
+      Log.info(e, req);
     }
   }
   return res;

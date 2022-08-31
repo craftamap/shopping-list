@@ -8,6 +8,7 @@ import { tw } from "../utils/twind.ts";
 import * as db from "../db/index.ts";
 import { hash, verify } from "https://deno.land/x/scrypt/mod.ts";
 import { MiddlewareState } from "../middleware/MiddlewareState.ts";
+import Log from "../log.ts";
 
 export const handler: Handlers<unknown, MiddlewareState> = {
   async POST(_req, ctx) {
@@ -20,7 +21,7 @@ export const handler: Handlers<unknown, MiddlewareState> = {
     }
     const matches = verify(password, user?.passwordHash!);
     if (!matches) {
-      console.log("password does not match!");
+      Log.info("password does not match!");
       return Response.redirect(new URL("/login", _req.url));
     }
 

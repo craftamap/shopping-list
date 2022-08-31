@@ -8,6 +8,7 @@ import ShoppingList, { ListItem } from "../islands/ShoppingList.tsx";
 import { listService } from "../services/list-service.ts";
 import { List } from "../db/index.ts";
 import { authMiddleware, AuthState } from "../middleware/auth.ts";
+import Log from "../log.ts";
 
 interface HomeData {
   items: ListItem[];
@@ -22,7 +23,7 @@ export const handler: Handlers<
     const handler = async () => {
       const list = listService.getActiveList()!;
       // TODO: if no active list exists, create a new list.
-      console.log("activeList", list);
+      Log.info("activeList", list);
       const items = listService.getItems(list.id) as ListItem[];
       return await ctx.render({ items, list });
     };

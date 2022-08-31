@@ -1,4 +1,5 @@
 import { Handlers } from "$fresh/server.ts";
+import Log from "../../../../../../log.ts";
 import { listService } from "../../../../../../services/list-service.ts";
 
 export const handler: Handlers = {
@@ -8,7 +9,7 @@ export const handler: Handlers = {
     const data = await req.json();
     listService.putItemChecked(itemId, data.checked);
     const allItems = listService.getItems(listId);
-    console.log("allItems", allItems);
+    Log.info("allItems", allItems);
     return new Response(JSON.stringify(allItems));
   },
 };
