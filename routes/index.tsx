@@ -1,5 +1,3 @@
-/** @jsx h */
-import { h } from "preact";
 import Root from "../components/static/Root.tsx";
 import { Handlers, PageProps } from "$fresh/server.ts";
 import Header from "../components/Header.tsx";

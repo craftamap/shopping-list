@@ -1,7 +1,5 @@
-/** @jsx h */
-import { h } from "preact";
 import { useCallback, useMemo, useState } from "preact/hooks";
-import { tw } from "@twind";
+import { tw } from "twind";
 import "preact/debug";
 import { List } from "../db/index.ts";
 

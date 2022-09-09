@@ -1,10 +1,9 @@
-/** @jsx h */
 import "preact/debug";
 import "preact/devtools";
-import { createContext, Fragment, h } from "preact";
+import { createContext, Fragment } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
-import { tw } from "@twind";
+import { tw } from "twind";
 
 function urlify(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -158,11 +157,11 @@ function ShoppingListItem(
         >
           ⠿
         </div>
-        <label class={tw`text-lg flex flex-grow-1`}>
+        <label class="text-lg flex flex-grow-1">
           <input
             type="checkbox"
             checked={checked}
-            class={tw`mr-1 accent-violet-700`}
+            class="mr-1 accent-violet-700"
             onClick={(e) => {
               e.preventDefault();
               onChecked(id, e.currentTarget.checked);
@@ -170,7 +169,7 @@ function ShoppingListItem(
           />
           {!asInput && (
             <span
-              class={tw`min-w-[4em] flex-grow-1 item--text`}
+              class="min-w-[4em] flex-grow-1 item--text"
               onClick={(e) => {
                 if ((e.target as HTMLElement).tagName !== "SPAN") {
                   return;
@@ -187,7 +186,7 @@ function ShoppingListItem(
               autofocus
               ref={inputRef}
               draggable={false}
-              class={tw`border-solid border-b-1 border-b-blue-500 flex-grow-1`}
+              class="border-solid border-b-1 border-b-blue-500 flex-grow-1"
               type="text"
               value={text}
               onMouseDown={(e) => {
@@ -220,11 +219,11 @@ function ShoppingListItem(
               }}
             />
           )}
-          {false && <span class={tw`text-xs`}>( {id.substring(0, 4)} ,</span>}
-          {false && <span class={tw`text-xs text-purple-500`}>{sort} )</span>}
+          {false && <span class="text-xs">( {id.substring(0, 4)} ,</span>}
+          {false && <span class="text-xs text-purple-500">{sort} )</span>}
         </label>
         <button
-          class={tw`p-1 rounded hover:bg-gray-200`}
+          class="p-1 rounded hover:bg-gray-200"
           onClick={() => onDelete(id)}
         >
           x
@@ -259,10 +258,10 @@ function NewShoppingListItem(
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div class={tw`flex`}>
+    <div class="flex">
       <input
         ref={inputRef}
-        class={tw`flex-grow-1 border-b-1 border-solid`}
+        class="flex-grow-1 border-b-1 border-solid"
         type="text"
         onKeyPress={(e) => {
           if (e.key === "Enter") {
@@ -272,7 +271,7 @@ function NewShoppingListItem(
         }}
       />
       <button
-        class={tw`p-1 rounded hover:bg-gray-200`}
+        class="p-1 rounded hover:bg-gray-200"
         onClick={(_) => {
           onClick(inputRef?.current?.value);
         }}
@@ -384,7 +383,7 @@ export default function ShoppingList(
 
   return (
     <ListIdContext.Provider value={listId}>
-      <div class={tw`divide-y divide-solid`}>
+      <div class="divide-y divide-solid">
         {shoppingListItems}
         <NewShoppingListItem
           onClick={(value) => {
