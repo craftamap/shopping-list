@@ -34,9 +34,7 @@ export default function Greet(_props: PageProps) {
       />
       <Main>
         <form method="POST">
-          <label
-            class="block"
-          >
+          <label class="block">
             <span>Username</span>
             <input
               class="border(b-1 gray-500) w-full"
@@ -46,9 +44,7 @@ export default function Greet(_props: PageProps) {
               required
             />
           </label>
-          <label
-            class="block"
-          >
+          <label class="block">
             <span>Password</span>
             <input
               class="border(b-1 gray-500) w-full"

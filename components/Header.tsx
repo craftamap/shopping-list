@@ -1,4 +1,4 @@
-import {Fragment } from "preact";
+import { Fragment } from "preact";
 import { Head } from "https://deno.land/x/fresh@1.0.1/runtime.ts";
 
 export default function Header(
