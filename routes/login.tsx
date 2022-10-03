@@ -3,6 +3,7 @@ import Root from "../components/static/Root.tsx";
 import Header from "../components/Header.tsx";
 import Main from "../components/Main.tsx";
 import * as db from "../db/index.ts";
+import { usersRepository } from "../db/index.ts";
 import { hash, verify } from "https://deno.land/x/scrypt/mod.ts";
 import { MiddlewareState } from "../middleware/MiddlewareState.ts";
 
@@ -11,7 +12,7 @@ export const handler: Handlers<unknown, MiddlewareState> = {
     const formData = await _req.formData();
     const username = formData.get("username")?.valueOf()! as string;
     const password = formData.get("password")?.valueOf()! as string;
-    const user = db.getUserByUsername(username);
+    const user = usersRepository.getByUsername(username);
     if (!user) {
       return Response.redirect(new URL("/login", _req.url));
     }
