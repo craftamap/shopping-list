@@ -1,31 +1,32 @@
-import * as db from "../db/index.ts";
+import { itemsRepository, listsRepository } from "../db/index.ts";
+import { Item } from "../db/ItemsRepository.ts";
 import { ListItem } from "../islands/ShoppingList.tsx";
 import { eventHub } from "./hub.ts";
 
 class ListService {
   getLists() {
-    return db.getLists();
+    return listsRepository.getAll();
   }
 
   getList(listId: string) {
-    return db.getList(listId);
+    return listsRepository.get(listId);
   }
 
   updateListStatus(listId: string, status: string) {
     if (!["inprogress", "todo", "done"].includes(status)) {
       throw Error("wupsidaisy");
     }
-    db.updateListStatus(listId, status);
+    listsRepository.updateStatus(listId, status);
     eventHub.sendToClients(JSON.stringify({ type: "updateListStatus" }));
   }
 
   addList() {
-    return db.createList();
+    return listsRepository.create();
   }
 
   getActiveList() {
     // TODO: realize this in sql -> blocker? can we get the latest list reliable with sqlite?
-    return db.getLists().filter((list) => {
+    return listsRepository.getAll().filter((list) => {
       return list.status !== "done";
     }).sort((listA, listB) => {
       return listB.date.getTime() - listA.date.getTime();
@@ -33,11 +34,11 @@ class ListService {
   }
 
   getItems(id: string) {
-    const items = db.getItems(id);
+    const items = itemsRepository.getAllByListId(id);
     console.log("getItems from db", items);
 
     const finalItems = [];
-    const itemMap = new Map<string, db.Item & ListItem>();
+    const itemMap = new Map<string, Item & ListItem>();
     for (const item of items) {
       itemMap.set(item.id, item);
     }
@@ -61,11 +62,11 @@ class ListService {
 
   putItem({ listId, text }: { listId: string; text: string }) {
     console.log(text);
-    const item = db.getLastItem(listId);
+    const item = itemsRepository.getLastByListId(listId);
     const [numerator, denominator] = item?.sortFractions || [0, 1];
 
     // to find the next slot, "add" 1/0
-    const newId = db.createItem(
+    const newId = itemsRepository.create(
       listId,
       text,
       [numerator + 1, denominator],
@@ -77,41 +78,47 @@ class ListService {
   }
 
   putItemChecked(itemId: string, checked: boolean) {
-    db.updateItemChecked(itemId, checked);
+    itemsRepository.updateChecked(itemId, checked);
     eventHub.sendToClients(
       JSON.stringify({ type: "putItemChecked", id: itemId }),
     );
   }
 
   updateItem(itemId: string, changes: { text: string }) {
-    db.updateItem(itemId, changes);
+    itemsRepository.update(itemId, changes);
     eventHub.sendToClients(
       JSON.stringify({ type: "updateItem", id: itemId }),
     );
   }
 
   deleteItem(itemId: string) {
-    // unwrap or delete all children?
-    const item = db.getItem(itemId);
-    db.getItems(item.list).filter((i) => i.parent === item.id).forEach((i) => {
+    const item = itemsRepository.get(itemId);
+    if (!item) {
+      throw new Error(`Can't delete item; no item with itemId=${itemId} found`);
+    }
+    itemsRepository.getAllByListId(item.list).filter((i) =>
+      i.parent === item.id
+    ).forEach((i) => {
       this.moveItem(i.id, { after: item.id });
     });
-    db.deleteItem(item.id);
+    itemsRepository.delete(item.id);
     eventHub.sendToClients(
       JSON.stringify({ type: "deleteItem", id: itemId }),
     );
   }
   moveItem(itemId: string, moveOperation: MoveOperation) {
     console.log("moveOperation", moveOperation);
-    const item = db.getItem(itemId);
+    const item = itemsRepository.get(itemId);
+    if (!item) {
+      throw new Error(`Can't move item; no item with itemId=${itemId} found`);
+    }
     const listId = item.list;
-    const listItems = db.getItems(listId);
+    const listItems = itemsRepository.getAllByListId(listId);
 
-    let after: db.Item | undefined;
-    let before: db.Item | undefined;
+    let after: Item | undefined;
+    let before: Item | undefined;
     let parent: string | undefined = item.parent;
     if (moveOperation.after) {
-      console.log(listItems);
       listItems.filter((listItem) => listItem.parent === item.parent)
         .forEach((listItem, idx, listItems) => {
           if (listItem.id === moveOperation.after) {
@@ -138,8 +145,6 @@ class ListService {
       )
         .at(0);
     }
-    console.log("after is", after);
-    console.log("before is", before);
 
     if (moveOperation.parent && moveOperation.parent !== item.id) {
       parent = moveOperation.parent;
@@ -151,8 +156,7 @@ class ListService {
       (after?.sortFractions[0] || 0) + (before?.sortFractions[0] || 1),
       (after?.sortFractions[1] || 1) + (before?.sortFractions[1] || 0),
     ];
-    console.log("updateItemMove with ", item);
-    db.updateItemMove(item.id, parent, item.sortFractions);
+    itemsRepository.move(item.id, parent, item.sortFractions);
     eventHub.sendToClients(JSON.stringify({ type: "moveItem", id: itemId }));
   }
 }

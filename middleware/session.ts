@@ -1,5 +1,5 @@
 import { MiddlewareHandlerContext } from "$fresh/server.ts";
-import * as db from "../db/index.ts";
+import { sessionsRepository } from "../db/index.ts";
 import {
   getCookies,
   setCookie,
@@ -15,12 +15,12 @@ export class Session {
   }
 
   static sessionExists(id: string): boolean {
-    return db.sessionExists(id);
+    return sessionsRepository.exists(id);
   }
 
   static createSession(): Session {
     const id = crypto.randomUUID();
-    db.createSession(id, JSON.stringify({}));
+    sessionsRepository.create({ id, data: JSON.stringify({}) });
     return new Session(id);
   }
 
@@ -29,16 +29,19 @@ export class Session {
   }
 
   get(key: string): unknown {
-    return JSON.parse(db.getSessionById(this.id)!.data)[key];
+    return JSON.parse(sessionsRepository.get(this.id)!.data)[key];
   }
 
   set(key: string, value: unknown) {
-    const data = JSON.parse(db.getSessionById(this.id)!.data) as Record<
+    const data = JSON.parse(sessionsRepository.get(this.id)!.data) as Record<
       string,
       unknown
     >;
     data[key] = value;
-    db.updateSession(this.id, JSON.stringify(data));
+    sessionsRepository.updateSession({
+      id: this.id,
+      data: JSON.stringify(data),
+    });
   }
 }
 
