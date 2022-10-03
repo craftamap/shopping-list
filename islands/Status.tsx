@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "preact/hooks";
 import { tw } from "twind";
-import "preact/debug";
 import { List } from "../db/index.ts";
 
 export default function Status({ initialList }: { initialList: List }) {

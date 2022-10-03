@@ -1,5 +1,3 @@
-import "preact/debug";
-import "preact/devtools";
 import { createContext, Fragment } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
