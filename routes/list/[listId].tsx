@@ -4,7 +4,7 @@ import Header from "../../components/Header.tsx";
 import Main from "../../components/Main.tsx";
 import ShoppingList, { ListItem } from "../../islands/ShoppingList.tsx";
 import { listService } from "../../services/list-service.ts";
-import { List } from "../../db/index.ts";
+import { List } from "../../db/ListsRepository.ts";
 
 interface ListIdData {
   items: ListItem[];
@@ -14,8 +14,8 @@ interface ListIdData {
 export const handler: Handlers<ListIdData> = {
   GET(_req, ctx) {
     const listId = ctx.params.listId;
-    const items = listService.getItems(listId);
     const list = listService.getList(listId)!;
+    const items = listService.getItems(listId);
     return ctx.render({ items, list });
   },
 };

@@ -2,6 +2,8 @@ import { createContext, Fragment } from "preact";
 import { useContext, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { IS_BROWSER } from "$fresh/runtime.ts";
 import { tw } from "twind";
+import { treeifyItems } from "../util/tree.ts";
+import { Item } from "../db/ItemsRepository.ts";
 
 function urlify(text: string) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -293,6 +295,10 @@ export default function ShoppingList(
 ) {
   const [items, setItems] = useState(initialItems || []);
 
+  const treeifiedItems = useMemo(() => {
+    return treeifyItems(items)
+  }, [items])
+
   const reload = async () => {
     const response = await fetch(`/api/list/${listId}/item`);
     setItems(await response.json() as unknown as ListItem[]);
@@ -364,9 +370,10 @@ export default function ShoppingList(
   };
 
   const shoppingListItems = useMemo(() => {
-    return items.map((item) => {
+    return treeifiedItems.map((item) => {
       return (
         <ShoppingListItem
+          key={item.id}
           id={item.id}
           text={item.text}
           checked={item.checked}

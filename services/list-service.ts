@@ -35,29 +35,8 @@ class ListService {
 
   getItems(id: string) {
     const items = itemsRepository.getAllByListId(id);
-    console.log("getItems from db", items);
 
-    const finalItems = [];
-    const itemMap = new Map<string, Item & ListItem>();
-    for (const item of items) {
-      itemMap.set(item.id, item);
-    }
-
-    for (const item of items) {
-      if (item.parent) {
-        const parent = itemMap.get(item.parent);
-        if (parent) {
-          if (!parent.children) {
-            parent.children = [];
-          }
-          parent.children.push(item);
-        }
-      } else {
-        finalItems.push(item);
-      }
-    }
-    console.log(finalItems);
-    return finalItems;
+    return items;
   }
 
   putItem({ listId, text }: { listId: string; text: string }) {
