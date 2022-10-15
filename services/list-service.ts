@@ -1,7 +1,7 @@
 import { itemsRepository, listsRepository } from "../db/index.ts";
 import { Item } from "../db/ItemsRepository.ts";
-import { ListItem } from "../islands/ShoppingList.tsx";
 import { eventHub } from "./hub.ts";
+import { searchService } from "./search.ts";
 
 class ListService {
   getLists() {
@@ -39,6 +39,10 @@ class ListService {
     return items;
   }
 
+  getItem(id: string) {
+    return itemsRepository.get(id);
+  }
+
   putItem({ listId, text }: { listId: string; text: string }) {
     console.log(text);
     const item = itemsRepository.getLastByListId(listId);
@@ -53,6 +57,13 @@ class ListService {
     );
 
     eventHub.sendToClients(JSON.stringify({ type: "putItem", id: newId }));
+    setTimeout(() => {
+      // use setTimeout to do it after the request
+      const newItem = this.getItem(newId);
+      if (newItem) {
+        searchService.addEntry(newItem);
+      }
+    }, 0);
     return newId;
   }
 
@@ -65,6 +76,13 @@ class ListService {
 
   updateItem(itemId: string, changes: { text: string }) {
     itemsRepository.update(itemId, changes);
+    setTimeout(() => {
+      // use setTimeout to do it after the request
+      const newItemValues = this.getItem(itemId);
+      if (newItemValues) {
+        searchService.updateEntry(newItemValues);
+      }
+    }, 0);
     eventHub.sendToClients(
       JSON.stringify({ type: "updateItem", id: itemId }),
     );
@@ -81,6 +99,12 @@ class ListService {
       this.moveItem(i.id, { after: item.id });
     });
     itemsRepository.delete(item.id);
+    setTimeout(() => {
+      // use setTimeout to do it after the request
+      if (item) {
+        searchService.removeEntry(item);
+      }
+    }, 0);
     eventHub.sendToClients(
       JSON.stringify({ type: "deleteItem", id: itemId }),
     );

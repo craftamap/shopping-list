@@ -28,7 +28,7 @@ export default function List(props: PageProps<ListType[]>) {
 
   return (
     <Root>
-      <Header title={"Shopping Lists"} />
+      <Header title={"Shopping Lists"} showSearch={true} />
       <Main>
         {shoppingLists}
         <div class="fixed bottom-6 right-6">

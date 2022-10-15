@@ -296,8 +296,8 @@ export default function ShoppingList(
   const [items, setItems] = useState(initialItems || []);
 
   const treeifiedItems = useMemo(() => {
-    return treeifyItems(items)
-  }, [items])
+    return treeifyItems(items);
+  }, [items]);
 
   const reload = async () => {
     const response = await fetch(`/api/list/${listId}/item`);
