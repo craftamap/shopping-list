@@ -3,6 +3,7 @@ import { BaseRepository } from "./BaseRepository.ts";
 
 export interface PersistedSession {
   id: string;
+  expiresAt: Date;
   data: string;
 }
 
@@ -19,6 +20,11 @@ export class SessionsRepository extends BaseRepository<PersistedSession> {
       },
       [],
     );
+    this.addColumn(["expiresAt", [
+      "text",
+      "NOT NULL",
+      'DEFAULT ""',
+    ]]);
   }
 
   exists(id: string) {
@@ -30,14 +36,14 @@ export class SessionsRepository extends BaseRepository<PersistedSession> {
   }
 
   get(id: string) {
-    const results = this.db.queryEntries<{ id: string; data: string }>(
+    const results = this.db.queryEntries<{ id: string; expiresAt: string; data: string }>(
       "SELECT id, data FROM sessions WHERE id = ?",
       [id],
     );
     return results.at(0);
   }
 
-  create({ id, data }: PersistedSession) {
+  create({ id, expiresAt, data }: PersistedSession) {
     const result = this.db.query(
       "INSERT INTO sessions (id, data) VALUES (?, ?)",
       [
