@@ -20,7 +20,14 @@ export class Session {
 
   static createSession(): Session {
     const id = crypto.randomUUID();
-    sessionsRepository.create({ id, data: JSON.stringify({}) });
+    const expiresAt = new Date();
+    // TODO: make expiry configurable
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    sessionsRepository.create({
+      id,
+      data: JSON.stringify({}),
+      expiresAt: expiresAt.toISOString(),
+    });
     return new Session(id);
   }
 
@@ -33,15 +40,27 @@ export class Session {
   }
 
   set(key: string, value: unknown) {
-    const data = JSON.parse(sessionsRepository.get(this.id)!.data) as Record<
+    const existingSession = sessionsRepository.get(this.id)!;
+    const data = JSON.parse(existingSession!.data) as Record<
       string,
       unknown
     >;
     data[key] = value;
     sessionsRepository.updateSession({
-      id: this.id,
+      ...existingSession,
       data: JSON.stringify(data),
     });
+  }
+
+  isExpired(): boolean {
+    const session = sessionsRepository.get(this.id);
+    if (!session) {
+      return true;
+    }
+
+    // if no expiresAt is set, or it's empty, fall back to an old date, thats expired for sure
+    const expiresAt = new Date(session.expiresAt || "1990-01-01");
+    return expiresAt > new Date();
   }
 }
 
