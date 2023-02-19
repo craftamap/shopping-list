@@ -5,7 +5,9 @@ function SearchResult({ result }) {
   return (
     <div class={"w-full border-b-2 py-2"}>
       <p>
-        <a href={`/api/redirect/item/${result.itemId}`}>{result.text}</a>
+        <a href={`/api/redirect/item/${result.document.itemId}`}>
+          {result.document.text}
+        </a>
       </p>
       <p class={"text-xs"}>{result.itemId}</p>
     </div>
