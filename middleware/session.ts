@@ -62,32 +62,52 @@ export class Session {
     const expiresAt = new Date(session.expiresAt || "1990-01-01");
     return expiresAt > new Date();
   }
+
+  getExpiresAt(): Date {
+    const session = sessionsRepository.get(this.id);
+    console.log("session", session);
+    const expiresAt = new Date(session?.expiresAt || "1990-01-01");
+    return expiresAt;
+  }
+}
+
+function ensureSession(
+  req: Request,
+  ctx: MiddlewareHandlerContext<MiddlewareState>,
+) {
+  const { sid } = getCookies(req.headers);
+
+  if (sid && Session.sessionExists(sid)) {
+    const existingSession = Session.getSession(sid)!;
+    if (existingSession.isExpired()) {
+      ctx.state.session = existingSession;
+      return;
+    }
+  }
+
+  const newSession = Session.createSession();
+  ctx.state.session = newSession;
+
+  return newSession.id;
 }
 
 export async function sessionMiddleware(
   req: Request,
   ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
-  const { sid } = getCookies(req.headers);
-  console.log("sid", sid);
-  let newSid;
-  if (sid && Session.sessionExists(sid)) {
-    ctx.state.session = Session.getSession(sid)!;
-  } else {
-    console.log("no sid");
-    const newSession = Session.createSession();
-    ctx.state.session = newSession;
-    newSid = ctx.state.session.id;
-    console.log("newSid", newSid);
-  }
+  const newSid = ensureSession(req, ctx);
+
   const res = await ctx.next();
+
   if (newSid) {
-    try { // we can't set the headers on redirects for some reason.
+    try { // we can't set the headers on redirects.
+      console.log("setCookie!");
       setCookie(res.headers, {
         name: "sid",
         value: newSid,
         path: "/",
         httpOnly: true,
+        expires: ctx.state.session.getExpiresAt(),
       });
     } catch (e) {
       console.log(e, req);

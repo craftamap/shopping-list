@@ -39,18 +39,19 @@ export class SessionsRepository extends BaseRepository<PersistedSession> {
     const results = this.db.queryEntries<
       { id: string; expiresAt: string; data: string }
     >(
-      "SELECT id, data FROM sessions WHERE id = ?",
+      "SELECT id, data, expiresAt FROM sessions WHERE id = ?",
       [id],
     );
     return results.at(0);
   }
 
-  create({ id, data }: PersistedSession) {
+  create({ id, data, expiresAt }: PersistedSession) {
     const result = this.db.query(
-      "INSERT INTO sessions (id, data) VALUES (?, ?)",
+      "INSERT INTO sessions (id, data, expiresAt) VALUES (?, ?, ?)",
       [
         id,
         data,
+        expiresAt,
       ],
     );
     return result;
