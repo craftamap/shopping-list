@@ -53,7 +53,6 @@ export class ItemsRepository extends BaseRepository<Item> {
       );
     }
     return rows.map((row) => {
-      console.log(row);
       const numbers = new Uint32Array(row.sortFractions.buffer);
       return {
         ...row,

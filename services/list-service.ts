@@ -44,7 +44,6 @@ class ListService {
   }
 
   putItem({ listId, text }: { listId: string; text: string }) {
-    console.log(text);
     const item = itemsRepository.getLastByListId(listId);
     const [numerator, denominator] = item?.sortFractions || [0, 1];
 
@@ -57,11 +56,11 @@ class ListService {
     );
 
     eventHub.sendToClients(JSON.stringify({ type: "putItem", id: newId }));
-    setTimeout(() => {
+    setTimeout(async () => {
       // use setTimeout to do it after the request
       const newItem = this.getItem(newId);
       if (newItem) {
-        searchService.addEntry(newItem);
+        await searchService.addEntry(newItem);
       }
     }, 0);
     return newId;
@@ -76,11 +75,15 @@ class ListService {
 
   updateItem(itemId: string, changes: { text: string }) {
     itemsRepository.update(itemId, changes);
-    setTimeout(() => {
-      // use setTimeout to do it after the request
-      const newItemValues = this.getItem(itemId);
-      if (newItemValues) {
-        searchService.updateEntry(newItemValues);
+    setTimeout(async () => {
+      try {
+        // use setTimeout to do it after the request
+        const newItemValues = this.getItem(itemId);
+        if (newItemValues) {
+          await searchService.updateEntry(newItemValues);
+        }
+      } catch (e) {
+        console.log(e);
       }
     }, 0);
     eventHub.sendToClients(
@@ -99,10 +102,14 @@ class ListService {
       this.moveItem(i.id, { after: item.id });
     });
     itemsRepository.delete(item.id);
-    setTimeout(() => {
-      // use setTimeout to do it after the request
-      if (item) {
-        searchService.removeEntry(item);
+    setTimeout(async () => {
+      try {
+        // use setTimeout to do it after the request
+        if (item) {
+          await searchService.removeEntry(item);
+        }
+      } catch (e) {
+        console.log(e);
       }
     }, 0);
     eventHub.sendToClients(
@@ -110,7 +117,6 @@ class ListService {
     );
   }
   moveItem(itemId: string, moveOperation: MoveOperation) {
-    console.log("moveOperation", moveOperation);
     const item = itemsRepository.get(itemId);
     if (!item) {
       throw new Error(`Can't move item; no item with itemId=${itemId} found`);

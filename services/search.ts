@@ -6,7 +6,7 @@ import {
   PropertiesSchema,
   remove,
   search,
-} from "https://esm.sh/@lyrasearch/lyra@0.2.6";
+} from "https://esm.sh/@lyrasearch/lyra@0.4.9";
 import { Item } from "../db/ItemsRepository.ts";
 import { listService } from "./list-service.ts";
 
@@ -18,14 +18,19 @@ interface ItemIndexSchema extends PropertiesSchema {
 class SearchService {
   #itemIndex: Lyra<ItemIndexSchema>;
 
-  constructor() {
-    this.#itemIndex = create({
+  static async create() {
+    const itemIndex = await create({
       schema: {
         text: "string",
         itemId: "string",
       },
       defaultLanguage: "german",
     });
+    return new SearchService(itemIndex);
+  }
+
+  private constructor(itemIndex: Lyra<ItemIndexSchema>) {
+    this.#itemIndex = itemIndex;
   }
 
   async initalize() {
@@ -43,49 +48,49 @@ class SearchService {
     );
   }
 
-  addEntry(item: Item) {
+  async addEntry(item: Item) {
     console.debug(`adding item ${item.id} to search index`);
-    insert(this.#itemIndex, {
+    await insert(this.#itemIndex, {
       text: item.text,
       itemId: item.id,
     });
   }
 
-  updateEntry(item: Item) {
+  async updateEntry(item: Item) {
     console.debug(`updating item ${item.id} in search index`);
     try {
-      this.removeEntry(item);
-      this.addEntry(item);
+      await this.removeEntry(item);
+      await this.addEntry(item);
     } catch (e) {
-      console.log(e);
+      console.log(`failed to update entry`, e);
     }
   }
 
-  removeEntry(item: Item | { id: string }) {
+  async removeEntry(item: Item | { id: string }) {
     console.debug(`removing item ${item.id} from search index`);
-    const searchResults = search(this.#itemIndex, {
+    const searchResults = await search(this.#itemIndex, {
       term: item.id,
       properties: ["itemId"],
     });
     const matchingSearchResult = searchResults.hits.find((r) => {
-      return r.itemId === item.id;
+      return r.document.itemId === item.id;
     });
 
     if (!matchingSearchResult) {
       throw new Error(
-        `failed to remove item ${item.id}, could find it in index`,
+        `failed to remove item ${item.id}, couldnt find it in index`,
       );
     }
 
     remove(this.#itemIndex, matchingSearchResult.id);
   }
 
-  search(term: string) {
-    return search(this.#itemIndex, {
+  async search(term: string) {
+    return await search(this.#itemIndex, {
       term,
       properties: ["text"],
     });
   }
 }
 
-export const searchService = new SearchService();
+export const searchService = await SearchService.create();

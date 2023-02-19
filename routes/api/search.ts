@@ -2,7 +2,7 @@ import { Handlers } from "https://deno.land/x/fresh@1.1.1/server.ts";
 import { searchService } from "../../services/search.ts";
 
 export const handler: Handlers = {
-  GET(req) {
+  async GET(req) {
     const u = new URL(req.url);
     const term = u.searchParams.get("term");
     if (!term) {
@@ -15,8 +15,8 @@ export const handler: Handlers = {
         },
       );
     }
-    const searchResult = searchService.search(term);
-    searchResult.elapsed = undefined;
+    const searchResult = await searchService.search(term);
+    searchResult.elapsed = "";
     return new Response(JSON.stringify(searchResult));
   },
 };

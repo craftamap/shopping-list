@@ -2,9 +2,8 @@ import { Handlers, PageProps } from "$fresh/server.ts";
 import Root from "../components/static/Root.tsx";
 import Header from "../components/Header.tsx";
 import Main from "../components/Main.tsx";
-import * as db from "../db/index.ts";
 import { usersRepository } from "../db/index.ts";
-import { hash, verify } from "https://deno.land/x/scrypt/mod.ts";
+import { verify } from "https://deno.land/x/scrypt/mod.ts";
 import { MiddlewareState } from "../middleware/MiddlewareState.ts";
 
 export const handler: Handlers<unknown, MiddlewareState> = {

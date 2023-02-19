@@ -27,7 +27,6 @@ export default function Status({ initialList }: { initialList: List }) {
   }, [list]);
 
   const onClick = useCallback(() => {
-    console.log(list);
     if (list.status === "todo") {
       updateListStatus("inprogress");
     } else if (list.status === "inprogress") {
