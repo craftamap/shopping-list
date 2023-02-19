@@ -49,5 +49,26 @@ export abstract class BaseRepository<T> {
     );
   }
 
+  columnExists(columnName: string): boolean {
+    const result = this.db.queryEntries<{ count: number }>(
+      `SELECT count(*) as count FROM pragma_table_info('${this.tableName}') where name = ?;`,
+      [columnName],
+    );
+    return (result.at(0)?.count == 1);
+  }
+
+  addColumn(column: [string, string[]]) {
+    if (this.columnExists(column[0])) {
+      console.warn(
+        `${column[0]} already exists in ${this.tableName}, skipping altering`,
+      );
+      return;
+    }
+
+    const columnDeclaration = `${column[0]} ${column[1].join(" ")}`;
+
+    this.db.execute(`ALTER TABLE ${this.tableName} ADD ${columnDeclaration}`);
+  }
+
   abstract initialize(): void;
 }

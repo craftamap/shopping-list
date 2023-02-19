@@ -20,7 +20,14 @@ export class Session {
 
   static createSession(): Session {
     const id = crypto.randomUUID();
-    sessionsRepository.create({ id, data: JSON.stringify({}) });
+    const expiresAt = new Date();
+    // TODO: make expiry configurable
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    sessionsRepository.create({
+      id,
+      data: JSON.stringify({}),
+      expiresAt: expiresAt.toISOString(),
+    });
     return new Session(id);
   }
 
@@ -33,42 +40,74 @@ export class Session {
   }
 
   set(key: string, value: unknown) {
-    const data = JSON.parse(sessionsRepository.get(this.id)!.data) as Record<
+    const existingSession = sessionsRepository.get(this.id)!;
+    const data = JSON.parse(existingSession!.data) as Record<
       string,
       unknown
     >;
     data[key] = value;
     sessionsRepository.updateSession({
-      id: this.id,
+      ...existingSession,
       data: JSON.stringify(data),
     });
   }
+
+  isExpired(): boolean {
+    const session = sessionsRepository.get(this.id);
+    if (!session) {
+      return true;
+    }
+
+    // if no expiresAt is set, or it's empty, fall back to an old date, thats expired for sure
+    const expiresAt = new Date(session.expiresAt || "1990-01-01");
+    return expiresAt > new Date();
+  }
+
+  getExpiresAt(): Date {
+    const session = sessionsRepository.get(this.id);
+    console.log("session", session);
+    const expiresAt = new Date(session?.expiresAt || "1990-01-01");
+    return expiresAt;
+  }
+}
+
+function ensureSession(
+  req: Request,
+  ctx: MiddlewareHandlerContext<MiddlewareState>,
+) {
+  const { sid } = getCookies(req.headers);
+
+  if (sid && Session.sessionExists(sid)) {
+    const existingSession = Session.getSession(sid)!;
+    if (existingSession.isExpired()) {
+      ctx.state.session = existingSession;
+      return;
+    }
+  }
+
+  const newSession = Session.createSession();
+  ctx.state.session = newSession;
+
+  return newSession.id;
 }
 
 export async function sessionMiddleware(
   req: Request,
   ctx: MiddlewareHandlerContext<MiddlewareState>,
 ) {
-  const { sid } = getCookies(req.headers);
-  console.log("sid", sid);
-  let newSid;
-  if (sid && Session.sessionExists(sid)) {
-    ctx.state.session = Session.getSession(sid)!;
-  } else {
-    console.log("no sid");
-    const newSession = Session.createSession();
-    ctx.state.session = newSession;
-    newSid = ctx.state.session.id;
-    console.log("newSid", newSid);
-  }
+  const newSid = ensureSession(req, ctx);
+
   const res = await ctx.next();
+
   if (newSid) {
-    try { // we can't set the headers on redirects for some reason.
+    try { // we can't set the headers on redirects.
+      console.log("setCookie!");
       setCookie(res.headers, {
         name: "sid",
         value: newSid,
         path: "/",
         httpOnly: true,
+        expires: ctx.state.session.getExpiresAt(),
       });
     } catch (e) {
       console.log(e, req);
