@@ -1,0 +1,109 @@
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useItemsStore } from '../stores/items';
+
+const props = defineProps<{
+    node: any,
+    depth?: number;
+}>();
+const node = props.node
+console.log(node)
+const item = node[1].item
+const itemsStore = useItemsStore();
+
+const change = (foo: any) => {
+    console.log(item.checked, foo)
+    itemsStore.update(item.list, item.id, foo.currentTarget.checked)
+}
+
+const moveAfter = (afterId: string) => {
+    itemsStore.moveAfter(item.list, item.id, afterId)
+}
+
+
+const onDragStart = (ev: DragEvent) => {
+    console.log(ev.target)
+    ev.dataTransfer?.setData("application/json", JSON.stringify(item.id))
+}
+
+const showAfter = ref(false);
+
+const onDragEnterAfter = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    showAfter.value = true;
+}
+
+const onDragOverAfter = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    showAfter.value = true;
+}
+const onDragLeaveAfter = (_ev: DragEvent) => {
+    showAfter.value = false;
+}
+const onDropAfter = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    const data = JSON.parse(ev.dataTransfer?.getData("application/json") || '')
+    console.log("transfered item", data, "target", item.id)
+    moveAfter(data)
+}
+
+
+const showNested = ref(false);
+
+const onDragEnterNested = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    showNested.value = true;
+}
+
+const onDragOverNested = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    showNested.value = true;
+}
+const onDragLeaveNested = (_ev: DragEvent) => {
+    showNested.value = false;
+}
+const onDropNested = (ev: DragEvent) => {
+    ev.preventDefault(); // marks an area as droppable
+    const data = ev.dataTransfer?.getData("application/json")
+    console.log(data)
+    showNested.value = false;
+}
+</script>
+
+<template>
+    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" draggable="true" @dragstart="onDragStart">
+        <span>⋮</span><input type="checkbox" :checked="item.checked" @change="change" />
+        {{ item.text }}
+        <div class="droparea">
+            <div class="after" :class="showAfter ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"
+                @dragleave="onDragLeaveAfter" @drop="onDropAfter">after</div>
+            <div class="nested" :class="showNested ? 'visible' : ''" @dragenter="onDragEnterNested" @dragover="onDragOverNested"
+                @dragleave="onDragLeaveNested" @drop="onDropNested" >nested</div>
+        </div>
+    </div>
+    <ShoppingListItem v-for="child of node[1].children" :node="child" :depth="(depth || 0) + 1" />
+</template>
+
+<style>
+.droparea {
+    font-size: xx-small;
+
+    >div {
+        display: inline-block;
+        opacity: 0;
+
+    }
+
+    .after {
+        background: red;
+    }
+
+    .nested {
+        background: blue;
+    }
+
+    .visible {
+        opacity: 1;
+    }
+}
+</style>
