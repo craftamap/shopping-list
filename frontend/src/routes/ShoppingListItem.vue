@@ -16,8 +16,14 @@ const change = (foo: any) => {
     itemsStore.update(item.list, item.id, foo.currentTarget.checked)
 }
 
-const moveAfter = (afterId: string) => {
-    itemsStore.moveAfter(item.list, item.id, afterId)
+const moveAfter = async (draggedItemId: string) => {
+    console.log(item)
+    await itemsStore.moveAfter(item.list, draggedItemId, item.id)
+}
+
+const moveNested = async (draggedItemId: string) => {
+    console.log(item)
+    await itemsStore.moveNested(item.list, draggedItemId, item.id)
 }
 
 
@@ -43,7 +49,7 @@ const onDragLeaveAfter = (_ev: DragEvent) => {
 const onDropAfter = (ev: DragEvent) => {
     ev.preventDefault(); // marks an area as droppable
     const data = JSON.parse(ev.dataTransfer?.getData("application/json") || '')
-    console.log("transfered item", data, "target", item.id)
+    console.log("transferred item", data, "target", item.id)
     moveAfter(data)
 }
 
@@ -64,14 +70,14 @@ const onDragLeaveNested = (_ev: DragEvent) => {
 }
 const onDropNested = (ev: DragEvent) => {
     ev.preventDefault(); // marks an area as droppable
-    const data = ev.dataTransfer?.getData("application/json")
-    console.log(data)
-    showNested.value = false;
+    const data = JSON.parse(ev.dataTransfer?.getData("application/json") || '')
+    console.log("transferred item", data, "target", item.id)
+    moveNested(data)
 }
 </script>
 
 <template>
-    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" draggable="true" @dragstart="onDragStart">
+    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true" @dragstart="onDragStart">
         <span>⋮</span><input type="checkbox" :checked="item.checked" @change="change" />
         {{ item.text }}
         <div class="droparea">

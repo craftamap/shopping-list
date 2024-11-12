@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"log/slog"
@@ -49,7 +49,7 @@ func getItemsByListId(itemRepo *db.ItemRepository) http.HandlerFunc {
 		id := r.PathValue("listId")
 		items, err := itemRepo.FindAllByListId(r.Context(), id)
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 		json.NewEncoder(w).Encode(items)
@@ -57,7 +57,7 @@ func getItemsByListId(itemRepo *db.ItemRepository) http.HandlerFunc {
 	}
 
 }
-func updateItemById(itemRepo db.ItemRepository) http.HandlerFunc {
+func updateItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		itemId := r.PathValue("itemId")
 		patch := struct {
@@ -80,38 +80,62 @@ func updateItemById(itemRepo db.ItemRepository) http.HandlerFunc {
 
 	}
 }
-func moveItemById(db *sql.DB) http.HandlerFunc {
+
+func moveItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
+	findById := func(items []db.ShoppingListItem, id string) *db.ShoppingListItem {
+		for _, item := range items {
+			if item.ID == id {
+				return &item
+			}
+		}
+		return nil
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		ids := struct {
 			AfterId  *string `json:"afterId"` // id after which the item should be inserted
 			ParentId *string `json:"parentId"`
 		}{}
-		json.NewDecoder(r.Body).Decode(&ids)
+		err := json.NewDecoder(r.Body).Decode(&ids)
+		if err != nil {
+			slog.Info("we got err", "err", err)
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
 
 		itemId := r.PathValue("itemId")
-		item, err := getItem(db, r.Context(), itemId)
+		item, err := itemRepo.FindById(r.Context(), itemId)
+
 		if err != nil {
-			http.Error(w, "", 500)
+			slog.Info("we got err", "err", err)
+			http.Error(w, err.Error(), 500)
 			return
 		}
-		items, err := getAllItemsByListId(db, r.Context(), item.Parent)
+		items, err := itemRepo.FindAllByListId(r.Context(), item.List)
 		if err != nil {
-			http.Error(w, "", 500)
+			slog.Info("we got err", "err", err)
+			http.Error(w, err.Error(), 500)
 			return
 		}
+		var after *db.ShoppingListItem  // moved item will be placed AFTER after
+		var before *db.ShoppingListItem // moved item will be placed BEFORE before
+		var parentId *string
 		if ids.AfterId != nil {
-			after, err := getItem(db, r.Context(), *ids.AfterId)
-			if err != nil {
-				http.Error(w, "", 500)
+			foundById := findById(items, *ids.AfterId)
+			if foundById == nil {
+				slog.Info("we got err", "err", err)
+				http.Error(w, err.Error(), 500)
 				return
 			}
+			after = foundById
+			parentId = after.Parent
 			// find "after" and the node after "after"
 			foundAfter := false
-			var afterAfter ShoppingListItem
+			var afterAfter *db.ShoppingListItem
 			for _, i := range items {
 				if i.Parent == after.Parent {
-					if foundAfter {
-						afterAfter = i
+					if foundAfter && i.ID != itemId {
+						afterAfter = &i
 						break
 					}
 					if i.ID == *ids.AfterId {
@@ -119,8 +143,54 @@ func moveItemById(db *sql.DB) http.HandlerFunc {
 					}
 				}
 			}
-			fmt.Printf("afterAfter: %v\n", afterAfter)
+			before = afterAfter
+		} else if ids.ParentId != nil {
+			// fixme: check if ids.ParentId actually exists
+			parentId = ids.ParentId
 
+			var firstItemWithParent *db.ShoppingListItem
+			for _, item := range items {
+				if item.Parent != nil && *item.Parent == *ids.ParentId {
+					firstItemWithParent = &item
+					break
+				}
+			}
+
+			before = firstItemWithParent
+		}
+
+		numerator := 0
+		if after != nil {
+			numerator = numerator + after.SortFractions[0]
+		} else {
+			numerator = numerator + 0
+		}
+		if before != nil {
+			numerator = numerator + before.SortFractions[0]
+		} else {
+			numerator = numerator + 1
+		}
+
+		denominator := 0
+		if after != nil {
+			denominator = denominator + after.SortFractions[1]
+		} else {
+			denominator = denominator + 1
+		}
+		if before != nil {
+			denominator = denominator + before.SortFractions[1]
+		} else {
+			denominator = denominator + 0
+		}
+
+		newSortFractions := []int{numerator, denominator}
+
+		slog.Debug("move data", "itemId", itemId, "before", before, "after", after, "parentId", *parentId, "newSortFractions", newSortFractions)
+		err = itemRepo.Move(r.Context(), itemId, parentId, newSortFractions)
+		if err != nil {
+			slog.Info("we got err", "err", err)
+			http.Error(w, err.Error(), 500)
+			return
 		}
 	}
 }
@@ -139,6 +209,7 @@ func main() {
 	dbConn, err := sql.Open("sqlite3", "db.sqlite")
 	if err != nil {
 		slog.Error("failed to open db", "err", err)
+		os.Exit(1)
 	}
 
 	listRepo := db.NewListRepository(dbConn)
@@ -150,12 +221,16 @@ func main() {
 	r.Handle("GET /api/list/", getAllLists(listRepo))
 	r.Handle("GET /api/list/{listId}/", getList(listRepo))
 	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(itemRepo))
-	r.Handle("POST /api/list/{listId}/item/{itemId}", updateItemById(dbConn))
-	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(dbConn))
+	r.Handle("POST /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
+	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
 
 	slog.Info("Application ready!", "address", "http://localhost:3333")
 
 	handler := loggingMiddleware(r)
 
-	http.ListenAndServe(":3333", handler)
+	err = http.ListenAndServe("0.0.0.0:3333", handler)
+	if err != nil {
+		slog.Error("failed to start webserver", "err", err)
+		os.Exit(1)
+	}
 }

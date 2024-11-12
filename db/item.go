@@ -1,16 +1,18 @@
 package db
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/binary"
+	"fmt"
 )
 
 type ShoppingListItem struct {
 	ID            string  `json:"id"`
 	Text          string  `json:"text"`
 	Checked       bool    `json:"checked"`
-	Parent        string  `json:"parent"`
+	Parent        *string `json:"parent"`
 	List          string  `json:"list"`
 	Sort          float64 `json:"sort"`
 	SortFractions []int   `json:"-"`
@@ -37,13 +39,17 @@ func (ir *ItemRepository) FindAllByListId(ctx context.Context, listId string) ([
 		item := ShoppingListItem{}
 		var rawSortFractions []byte
 
-		_ = rows.Scan(&item.ID, &item.Text, &item.Checked, &item.Parent, &item.Sort, &rawSortFractions, &item.List)
+		err = rows.Scan(&item.ID, &item.Text, &item.Checked, &item.Parent, &item.Sort, &rawSortFractions, &item.List)
+		if err != nil {
+			return nil, err
+		}
 		if (len(rawSortFractions)) > 0 {
 			item.SortFractions = []int{
-				int(binary.BigEndian.Uint32(rawSortFractions[0:4])),
-				int(binary.BigEndian.Uint32(rawSortFractions[4:8])),
+				int(binary.LittleEndian.Uint32(rawSortFractions[0:4])),
+				int(binary.LittleEndian.Uint32(rawSortFractions[4:8])),
 			}
 		}
+		fmt.Printf("%+v %+v\n", item)
 		items = append(items, item)
 	}
 
@@ -51,7 +57,7 @@ func (ir *ItemRepository) FindAllByListId(ctx context.Context, listId string) ([
 }
 
 func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (ShoppingListItem, error) {
-	row := ir.db.QueryRowContext(ctx, "SELECT id, text, checked, parent, sort, sortFractions, list FROM items WHERE id = ? LIMIT 1;")
+	row := ir.db.QueryRowContext(ctx, "SELECT id, text, checked, parent, sort, sortFractions, list FROM items WHERE id = ? LIMIT 1;", itemId)
 
 	item := ShoppingListItem{}
 	var rawSortFractions []byte
@@ -61,8 +67,8 @@ func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (Shopping
 	}
 	if (len(rawSortFractions)) > 0 {
 		item.SortFractions = []int{
-			int(binary.BigEndian.Uint32(rawSortFractions[0:4])),
-			int(binary.BigEndian.Uint32(rawSortFractions[4:8])),
+			int(binary.LittleEndian.Uint32(rawSortFractions[0:4])),
+			int(binary.LittleEndian.Uint32(rawSortFractions[4:8])),
 		}
 	}
 
@@ -71,5 +77,15 @@ func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (Shopping
 
 func (ir *ItemRepository) UpdateChecked(ctx context.Context, itemId string, checked bool) error {
 	_, err := ir.db.ExecContext(ctx, "UPDATE items SET checked=? WHERE id = ?;", checked, itemId)
+	return err
+}
+
+func (ir *ItemRepository) Move(ctx context.Context, itemId string, parentId *string, sortFractions []int) error {
+	sort := float64(sortFractions[0]) / float64(sortFractions[1])
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint32(sortFractions[0]))
+	binary.Write(buf, binary.LittleEndian, uint32(sortFractions[1]))
+
+	_, err := ir.db.ExecContext(ctx, "UPDATE items SET parent=?, sort=?, sortFractions=? WHERE id=?;", parentId, sort, buf.Bytes(), itemId)
 	return err
 }
