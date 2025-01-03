@@ -8,8 +8,8 @@ export const useItemsStore = defineStore('items', {
         getItemsByList: (state) => ((id: string) => { console.log('a'); return state.itemsByList[id] })
     },
     actions: {
-        async fetch(id: string) {
-            const response = await fetch(`/api/list/${id}/item`)
+        async fetch(listId: string) {
+            const response = await fetch(`/api/list/${listId}/item/`)
             if (!response.ok) {
                 // TODO: proper error handling - fine for now.
                 return
@@ -17,7 +17,7 @@ export const useItemsStore = defineStore('items', {
             const json = await response.json()
             this.itemsByList = {
                 ...this.itemsByList,
-                [id]: json,
+                [listId]: json,
             }
         },
         async update(listId: string, itemId: string, checked: boolean) {
@@ -27,7 +27,7 @@ export const useItemsStore = defineStore('items', {
                     checked: checked,
                 }),
             });
-            this.fetch(itemId);
+            return this.fetch(listId);
         },
         async moveAfter(listId: string, itemId: string, afterId: string) {
             await fetch(`/api/list/${listId}/item/${itemId}/move`, {
@@ -36,7 +36,7 @@ export const useItemsStore = defineStore('items', {
                     afterId,
                 }),
             });
-            this.fetch(itemId);
+            return this.fetch(listId);
         },
         async moveNested(listId: string, itemId: string, parentId: string) {
             await fetch(`/api/list/${listId}/item/${itemId}/move`, {
@@ -45,7 +45,7 @@ export const useItemsStore = defineStore('items', {
                     parentId,
                 }),
             });
-            this.fetch(itemId);
+            return this.fetch(listId);
         }
     }
 })

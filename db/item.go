@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/binary"
-	"fmt"
 )
 
 type ShoppingListItem struct {
@@ -49,7 +48,6 @@ func (ir *ItemRepository) FindAllByListId(ctx context.Context, listId string) ([
 				int(binary.LittleEndian.Uint32(rawSortFractions[4:8])),
 			}
 		}
-		fmt.Printf("%+v %+v\n", item)
 		items = append(items, item)
 	}
 

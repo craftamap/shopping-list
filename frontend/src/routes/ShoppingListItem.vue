@@ -1,35 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref, toRefs } from 'vue';
 import { useItemsStore } from '../stores/items';
 
 const props = defineProps<{
     node: any,
     depth?: number;
 }>();
-const node = props.node
-console.log(node)
-const item = node[1].item
+const { node, depth } = toRefs(props)
+const item = computed(() => node.value[1].item);
 const itemsStore = useItemsStore();
 
 const change = (foo: any) => {
-    console.log(item.checked, foo)
-    itemsStore.update(item.list, item.id, foo.currentTarget.checked)
+    console.log(item.value.checked, foo)
+    itemsStore.update(item.value.list, item.value.id, foo.currentTarget.checked)
 }
 
 const moveAfter = async (draggedItemId: string) => {
     console.log(item)
-    await itemsStore.moveAfter(item.list, draggedItemId, item.id)
+    await itemsStore.moveAfter(item.value.list, draggedItemId, item.value.id)
 }
 
 const moveNested = async (draggedItemId: string) => {
     console.log(item)
-    await itemsStore.moveNested(item.list, draggedItemId, item.id)
+    await itemsStore.moveNested(item.value.list, draggedItemId, item.value.id)
 }
 
 
 const onDragStart = (ev: DragEvent) => {
     console.log(ev.target)
-    ev.dataTransfer?.setData("application/json", JSON.stringify(item.id))
+    ev.dataTransfer?.setData("application/json", JSON.stringify(item.value.id))
 }
 
 const showAfter = ref(false);
@@ -49,8 +48,11 @@ const onDragLeaveAfter = (_ev: DragEvent) => {
 const onDropAfter = (ev: DragEvent) => {
     ev.preventDefault(); // marks an area as droppable
     const data = JSON.parse(ev.dataTransfer?.getData("application/json") || '')
-    console.log("transferred item", data, "target", item.id)
+    console.log("transferred item", data, "target", item.value.id)
     moveAfter(data)
+
+    showAfter.value = false;
+    showNested.value = false;
 }
 
 
@@ -71,20 +73,24 @@ const onDragLeaveNested = (_ev: DragEvent) => {
 const onDropNested = (ev: DragEvent) => {
     ev.preventDefault(); // marks an area as droppable
     const data = JSON.parse(ev.dataTransfer?.getData("application/json") || '')
-    console.log("transferred item", data, "target", item.id)
+    console.log("transferred item", data, "target", item.value.id)
     moveNested(data)
+
+    showAfter.value = false;
+    showNested.value = false;
 }
 </script>
 
 <template>
-    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true" @dragstart="onDragStart">
+    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true"
+        @dragstart="onDragStart">
         <span>⋮</span><input type="checkbox" :checked="item.checked" @change="change" />
         {{ item.text }}
         <div class="droparea">
             <div class="after" :class="showAfter ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"
                 @dragleave="onDragLeaveAfter" @drop="onDropAfter">after</div>
-            <div class="nested" :class="showNested ? 'visible' : ''" @dragenter="onDragEnterNested" @dragover="onDragOverNested"
-                @dragleave="onDragLeaveNested" @drop="onDropNested" >nested</div>
+            <div class="nested" :class="showNested ? 'visible' : ''" @dragenter="onDragEnterNested"
+                @dragover="onDragOverNested" @dragleave="onDragLeaveNested" @drop="onDropNested">nested</div>
         </div>
     </div>
     <ShoppingListItem v-for="child of node[1].children" :node="child" :depth="(depth || 0) + 1" />

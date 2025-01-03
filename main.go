@@ -44,9 +44,13 @@ func getList(listRepo *db.ListRepository) http.HandlerFunc {
 	}
 }
 
-func getItemsByListId(itemRepo *db.ItemRepository) http.HandlerFunc {
+func getItemsByListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("listId")
+		_, err := listRepo.FindById(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+		}
 		items, err := itemRepo.FindAllByListId(r.Context(), id)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
@@ -133,7 +137,7 @@ func moveItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 			foundAfter := false
 			var afterAfter *db.ShoppingListItem
 			for _, i := range items {
-				if i.Parent == after.Parent {
+				if (i.Parent == nil && after.Parent == nil) || (i.Parent != nil && after.Parent != nil && *(i.Parent) == *(after.Parent)) {
 					if foundAfter && i.ID != itemId {
 						afterAfter = &i
 						break
@@ -185,7 +189,7 @@ func moveItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 
 		newSortFractions := []int{numerator, denominator}
 
-		slog.Debug("move data", "itemId", itemId, "before", before, "after", after, "parentId", *parentId, "newSortFractions", newSortFractions)
+		slog.Debug("move data", "itemId", itemId, "before", before, "after", after, "parentId", parentId, "newSortFractions", newSortFractions)
 		err = itemRepo.Move(r.Context(), itemId, parentId, newSortFractions)
 		if err != nil {
 			slog.Info("we got err", "err", err)
@@ -220,7 +224,7 @@ func main() {
 	r.Handle("GET /", http.FileServer(filesDir))
 	r.Handle("GET /api/list/", getAllLists(listRepo))
 	r.Handle("GET /api/list/{listId}/", getList(listRepo))
-	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(itemRepo))
+	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(listRepo, itemRepo))
 	r.Handle("POST /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
 	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
 
