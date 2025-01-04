@@ -225,7 +225,7 @@ func main() {
 	r.Handle("GET /api/list/", getAllLists(listRepo))
 	r.Handle("GET /api/list/{listId}/", getList(listRepo))
 	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(listRepo, itemRepo))
-	r.Handle("POST /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
+	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
 	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
 
 	slog.Info("Application ready!", "address", "http://localhost:3333")

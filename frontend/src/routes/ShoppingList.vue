@@ -48,7 +48,5 @@ const list = computed(() => listsStore.lists[id]);
 
 <template>
     <h1>{{list?.date}}</h1>
-    <div v-for="item of items">
-        <ShoppingListItem :node="item" />
-    </div>
+    <ShoppingListItem v-for="item of items" :node="item" />
 </template>

@@ -88,9 +88,9 @@ const onDropNested = (ev: DragEvent) => {
         {{ item.text }}
         <div class="droparea">
             <div class="after" :class="showAfter ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"
-                @dragleave="onDragLeaveAfter" @drop="onDropAfter">after</div>
+                @dragleave="onDragLeaveAfter" @drop="onDropAfter"></div>
             <div class="nested" :class="showNested ? 'visible' : ''" @dragenter="onDragEnterNested"
-                @dragover="onDragOverNested" @dragleave="onDragLeaveNested" @drop="onDropNested">nested</div>
+                @dragover="onDragOverNested" @dragleave="onDragLeaveNested" @drop="onDropNested"></div>
         </div>
     </div>
     <ShoppingListItem v-for="child of node[1].children" :node="child" :depth="(depth || 0) + 1" />
@@ -107,11 +107,15 @@ const onDropNested = (ev: DragEvent) => {
     }
 
     .after {
-        background: red;
+        background: lightgray;
+        width: 10%;     
+        height: 0.5em;
     }
 
     .nested {
-        background: blue;
+        background: lightgray;
+        width: 90%;
+        height: 0.5em;
     }
 
     .visible {
