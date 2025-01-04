@@ -9,16 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "pinia": "^2.1.7",
-    "vue": "^3.3.11",
-    "vue-router": "^4.2.5"
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.5.2",
-    "@vue/language-server": "^1.8.27",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.8",
-    "vue-tsc": "^1.8.25"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/language-server": "^2.2.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.2.0"
   },
-  "packageManager": "yarn@3.5.1+sha256.64c0b63e5fa0e21f354b5eff7c9a1b486f32046bfc3283670569e3c6a9cad102"
+  "packageManager": "yarn@4.6.0"
 }
