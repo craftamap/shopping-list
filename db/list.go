@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type ShoppingList struct {
@@ -48,4 +51,24 @@ func (lr *ListRepository) FindById(ctx context.Context, id string) (ShoppingList
 		return ShoppingList{}, fmt.Errorf("failed to find list with id %s %w", id, err)
 	}
 	return list, nil
+}
+
+func (lr *ListRepository) Create(ctx context.Context) (ShoppingList, error) {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return ShoppingList{}, err
+	}
+	row := lr.db.QueryRowContext(ctx, "INSERT into lists (id, status, date) VALUES (?, ?, ?) RETURNING id, status, date", id, "todo", time.Now().Format(time.RFC3339))
+
+	list := ShoppingList{}
+	err = row.Scan(&list.ID, &list.Status, &list.Date)
+	if err != nil {
+		return ShoppingList{}, fmt.Errorf("failed to find list with id %s %w", id, err)
+	}
+	return list, nil
+}
+
+func (lr *ListRepository) UpdateStatus(ctx context.Context, id string, newStatus string) error {
+	_, err := lr.db.ExecContext(ctx, "UPDATE lists SET status=? WHERE id=?", newStatus, id)
+	return err
 }

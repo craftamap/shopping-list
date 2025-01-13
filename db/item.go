@@ -5,6 +5,8 @@ import (
 	"context"
 	"database/sql"
 	"encoding/binary"
+
+	"github.com/google/uuid"
 )
 
 type ShoppingListItem struct {
@@ -73,8 +75,29 @@ func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (Shopping
 	return item, nil
 }
 
+func (ir *ItemRepository) Create(ctx context.Context, listId string, text string, sortFractions [2]int) error {
+	id, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+
+	sort := float64(sortFractions[0]) / float64(sortFractions[1])
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, uint32(sortFractions[0]))
+	binary.Write(buf, binary.LittleEndian, uint32(sortFractions[1]))
+
+	_, err = ir.db.ExecContext(ctx, "INSERT INTO items (id, text, checked, parent, sort, sortFractions, list) VALUES (?, ?, ?, ?, ?, ?, ?)", id, text, false, nil, sort, buf.Bytes(), listId)
+
+	return err
+}
+
 func (ir *ItemRepository) UpdateChecked(ctx context.Context, itemId string, checked bool) error {
 	_, err := ir.db.ExecContext(ctx, "UPDATE items SET checked=? WHERE id = ?;", checked, itemId)
+	return err
+}
+
+func (ir *ItemRepository) UpdateText(ctx context.Context, itemId string, text string) error {
+	_, err := ir.db.ExecContext(ctx, "UPDATE items SET text=? WHERE id = ?;", text, itemId)
 	return err
 }
 

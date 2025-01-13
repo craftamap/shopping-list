@@ -20,13 +20,23 @@ export const useItemsStore = defineStore('items', {
                 [listId]: json,
             }
         },
-        async update(listId: string, itemId: string, checked: boolean) {
+        async update(listId: string, itemId: string, { checked, text }: { checked?: boolean, text?: string }) {
             await fetch(`/api/list/${listId}/item/${itemId}`, {
                 method: 'PATCH',
                 body: JSON.stringify({
                     checked: checked,
+                    text: text,
                 }),
             });
+            return this.fetch(listId);
+        },
+        async create(listId: string, text: string) {
+            await fetch(`/api/list/${listId}/item/`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    text,
+                })
+            })
             return this.fetch(listId);
         },
         async moveAfter(listId: string, itemId: string, afterId: string) {

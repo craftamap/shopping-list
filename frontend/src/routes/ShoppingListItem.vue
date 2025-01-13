@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRefs } from 'vue';
+import { computed, ref, toRefs, useTemplateRef } from 'vue';
 import { useItemsStore } from '../stores/items';
 
 const props = defineProps<{
@@ -10,9 +10,9 @@ const { node, depth } = toRefs(props)
 const item = computed(() => node.value[1].item);
 const itemsStore = useItemsStore();
 
-const change = (foo: any) => {
+const changeChecked = (foo: any) => {
     console.log(item.value.checked, foo)
-    itemsStore.update(item.value.list, item.value.id, foo.currentTarget.checked)
+    itemsStore.update(item.value.list, item.value.id, { checked: foo.currentTarget.checked })
 }
 
 const moveAfter = async (draggedItemId: string) => {
@@ -79,13 +79,30 @@ const onDropNested = (ev: DragEvent) => {
     showAfter.value = false;
     showNested.value = false;
 }
+
+const asInput = ref(false)
+const input = useTemplateRef('text-input')
+const onClickText = () => {
+    asInput.value = true;
+    requestAnimationFrame(() => {
+        input.value?.focus();
+    })
+}
+const editInputModel = defineModel<string>()
+editInputModel.value = item.value.text
+
+const update = () => {
+    itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value })
+    input.value?.blur()
+}
 </script>
 
 <template>
     <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true"
         @dragstart="onDragStart">
-        <span>⋮</span><input type="checkbox" :checked="item.checked" @change="change" />
-        {{ item.text }}
+        <span>⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
+        <span v-if="!asInput" @click="onClickText">{{ item.text }}</span>
+        <input v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
         <div class="droparea">
             <div class="after" :class="showAfter ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"
                 @dragleave="onDragLeaveAfter" @drop="onDropAfter"></div>

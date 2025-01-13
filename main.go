@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"log/slog"
 
@@ -28,6 +29,21 @@ func getAllLists(listRepo *db.ListRepository) http.HandlerFunc {
 	}
 }
 
+func createList(listRepo *db.ListRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		list, err := listRepo.Create(r.Context())
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		err = json.NewEncoder(w).Encode(list)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+	}
+}
+
 func getList(listRepo *db.ListRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("listId")
@@ -36,6 +52,50 @@ func getList(listRepo *db.ListRepository) http.HandlerFunc {
 			http.Error(w, "", 500)
 			return
 		}
+		err = json.NewEncoder(w).Encode(list)
+		if err != nil {
+			http.Error(w, "", 500)
+			return
+		}
+	}
+}
+
+func updateList(listRepo *db.ListRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		listId := r.PathValue("listId")
+		_, err := listRepo.FindById(r.Context(), listId)
+		if err != nil {
+			http.Error(w, "", 500)
+			return
+		}
+
+		var updateListStatus struct {
+			Status string `json:"status"`
+		}
+		err = json.NewDecoder(r.Body).Decode(&updateListStatus)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+		}
+
+		status := updateListStatus.Status
+		validStatus := slices.Contains(([]string{"inprogress", "todo", "done"}), status)
+		if !validStatus {
+			http.Error(w, "invalid status", 400)
+			return
+		}
+
+		err = listRepo.UpdateStatus(r.Context(), listId, status)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+		}
+
+		// refetch list
+		list, err := listRepo.FindById(r.Context(), listId)
+		if err != nil {
+			http.Error(w, "", 500)
+			return
+		}
+
 		err = json.NewEncoder(w).Encode(list)
 		if err != nil {
 			http.Error(w, "", 500)
@@ -56,30 +116,79 @@ func getItemsByListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) 
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		json.NewEncoder(w).Encode(items)
-
+		err = json.NewEncoder(w).Encode(items)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 	}
-
 }
+
+func findHighestSort(existingItems []db.ShoppingListItem) [2]int {
+	sortFractions := [2]int{0, 1}
+	sort := 0.0
+	for _, item := range existingItems {
+		if item.Parent == nil && item.Sort > sort {
+			sort = item.Sort
+			sortFractions = [2]int(item.SortFractions)
+		}
+	}
+	return sortFractions
+}
+
+func createItemForListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		listId := r.PathValue("listId")
+		_, err := listRepo.FindById(r.Context(), listId)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+		}
+		type NewShoppingListItem struct {
+			Text  string  `json:"text"`
+			After *string `json:"after"`
+		}
+		var newItem NewShoppingListItem
+		json.NewDecoder(r.Body).Decode(&newItem)
+		existingItems, err := itemRepo.FindAllByListId(r.Context(), listId)
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+		}
+		highestSort := findHighestSort(existingItems)
+		newSort := [2]int{highestSort[0] + 1, highestSort[1]}
+
+		itemRepo.Create(r.Context(), listId, newItem.Text, newSort)
+	}
+}
+
 func updateItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		itemId := r.PathValue("itemId")
 		patch := struct {
-			Checked *bool `json:"checked"`
+			Text    *string `json:"text"`
+			Checked *bool   `json:"checked"`
 		}{}
 		json.NewDecoder(r.Body).Decode(&patch)
 
-		if patch.Checked == nil {
+		if patch.Checked == nil && patch.Text == nil {
 			slog.Error("no change")
 			return
 		}
 
-		err := itemRepo.UpdateChecked(r.Context(), itemId, *patch.Checked)
-
-		if err != nil {
-			slog.Info("we got err", "err", err)
-			http.Error(w, "bad", http.StatusInternalServerError)
-			return
+		if patch.Checked != nil {
+			err := itemRepo.UpdateChecked(r.Context(), itemId, *patch.Checked)
+			if err != nil {
+				slog.Info("we got err", "err", err)
+				http.Error(w, "bad", http.StatusInternalServerError)
+				return
+			}
+		}
+		if patch.Text != nil {
+			err := itemRepo.UpdateText(r.Context(), itemId, *patch.Text)
+			if err != nil {
+				slog.Info("we got err", "err", err)
+				http.Error(w, "bad", http.StatusInternalServerError)
+				return
+			}
 		}
 
 	}
@@ -223,8 +332,11 @@ func main() {
 
 	r.Handle("GET /", http.FileServer(filesDir))
 	r.Handle("GET /api/list/", getAllLists(listRepo))
+	r.Handle("POST /api/list/", createList(listRepo))
 	r.Handle("GET /api/list/{listId}/", getList(listRepo))
+	r.Handle("PATCH /api/list/{listId}/", updateList(listRepo))
 	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(listRepo, itemRepo))
+	r.Handle("POST /api/list/{listId}/item/", createItemForListId(listRepo, itemRepo))
 	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
 	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
 

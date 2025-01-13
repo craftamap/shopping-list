@@ -1,5 +1,8 @@
 import { defineStore } from "pinia";
 
+
+export type ListStatus = 'inprogress' | 'todo' | 'done'
+
 export const useListsStore = defineStore('lists', {
     state: () => ({
         lists: {} as Record<string, any>,
@@ -22,7 +25,7 @@ export const useListsStore = defineStore('lists', {
             }
         },
         async fetch(id: string) {
-            const response = await fetch(`/api/list/${id}`)
+            const response = await fetch(`/api/list/${id}/`)
             if (!response.ok) {
                 // TODO: proper error handling - fine for now.
                 return
@@ -38,6 +41,35 @@ export const useListsStore = defineStore('lists', {
                 return
             }
             this.fetch(id)
+        },
+        async create() {
+            const response = await fetch(`/api/list/`, {
+                method: 'POST',
+            })
+            if (!response.ok) {
+                // TODO: proper error handling - fine for now.
+                return
+            }
+            const item = await response.json()
+            this.lists = {
+                ...this.lists,
+                [item.id]: item
+            }
+
+            return item.id;
+        },
+        async updateStatus(id: string, status: ListStatus) {
+            const response = await fetch(`/api/list/${id}/`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    status: status,
+                }),
+            })
+
+            if (response.ok) {
+                return this.fetch(id)
+            }
+
         }
     }
 })

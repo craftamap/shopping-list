@@ -28,14 +28,14 @@ const route = useRoute()
 const itemsStore = useItemsStore();
 const listsStore = useListsStore();
 
-const id = route.params.id as string;
+const listId = route.params.id as string;
 
-listsStore.ensureFetched(id);
-itemsStore.fetch(id);
+listsStore.ensureFetched(listId);
+itemsStore.fetch(listId);
 
 const items = computed(
     () => {
-        const i = itemsStore.getItemsByList(id)
+        const i = itemsStore.getItemsByList(listId)
         if (!i) {
             return []
         }
@@ -43,10 +43,27 @@ const items = computed(
         return buildItemTree(i)
     }
 );
-const list = computed(() => listsStore.lists[id]);
+const list = computed(() => listsStore.lists[listId]);
+
+const createInput = defineModel<string>()
+const create = () => {
+    console.log(createInput)
+    if (createInput.value) {
+        itemsStore.create(listId, createInput.value || '')
+        createInput.value = ''
+    }
+}
+
 </script>
 
 <template>
     <h1>{{list?.date}}</h1>
     <ShoppingListItem v-for="item of items" :node="item" />
+    <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
 </template>
+
+<style>
+.newItem {
+    width: 100%;
+}
+</style>
