@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
-import ShoppingListItem from './ShoppingListItem.vue'
+import Header from '../components/Header.vue'
+import { RouterLink } from 'vue-router';
+import ShoppingListItem from '../components/ShoppingListItem.vue'
 import { useItemsStore } from '../stores/items.ts'
 import { useListsStore } from '../stores/lists';
 import { computed } from 'vue';
@@ -18,7 +20,9 @@ const buildItemTree = (items: any) => {
             rootNodes.push(node)
         } else {
             const parent = allNodes[item.parent];
-            parent.children.push(node);
+            if (!!parent) {
+                parent.children.push(node);
+            }
         }
     }
     return rootNodes
@@ -57,7 +61,12 @@ const create = () => {
 </script>
 
 <template>
-    <h1>{{list?.date}}</h1>
+    <Header>
+        <template v-slot:action-left>
+            <router-link to="/list">&#x2B90;</router-link>
+        </template>
+        {{new Date(list?.date).toLocaleString()}}
+    </Header>
     <ShoppingListItem v-for="item of items" :node="item" />
     <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
 </template>

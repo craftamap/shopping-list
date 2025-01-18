@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/binary"
+	"slices"
 
 	"github.com/google/uuid"
 )
@@ -108,5 +109,30 @@ func (ir *ItemRepository) Move(ctx context.Context, itemId string, parentId *str
 	binary.Write(buf, binary.LittleEndian, uint32(sortFractions[1]))
 
 	_, err := ir.db.ExecContext(ctx, "UPDATE items SET parent=?, sort=?, sortFractions=? WHERE id=?;", parentId, sort, buf.Bytes(), itemId)
+	return err
+}
+
+func (ir *ItemRepository) Delete(ctx context.Context, itemId string) error {
+	item, err := ir.FindById(ctx, itemId)
+	if err != nil {
+		return err
+	}
+	children, err := ir.FindAllByListId(ctx, item.List)
+	if err != nil {
+		return err
+	}
+	slices.DeleteFunc(children, func(i ShoppingListItem) bool {
+		if i.Parent == nil {
+			return true
+		}
+		return (*i.Parent) != item.ID
+	})
+
+	for _, _ = range children {
+		// refactor:  we would need a service layer, as we would need a moveAfter here?
+		// TODO: moveAfter
+	}
+
+	_, err = ir.db.ExecContext(ctx, "DELETE FROM items WHERE id = ?", itemId)
 	return err
 }

@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
-import './style.css'
+import './reset.css'
+import './app.css'
 import App from './App.vue'
 import Overview from './routes/Overview.vue'
 import ShoppingList from './routes/ShoppingList.vue'

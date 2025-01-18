@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, toRefs, useTemplateRef } from 'vue';
+import { computed, onMounted, ref, toRefs, useTemplateRef } from 'vue';
 import { useItemsStore } from '../stores/items';
 
 const props = defineProps<{
@@ -9,6 +9,7 @@ const props = defineProps<{
 const { node, depth } = toRefs(props)
 const item = computed(() => node.value[1].item);
 const itemsStore = useItemsStore();
+
 
 const changeChecked = (foo: any) => {
     console.log(item.value.checked, foo)
@@ -91,18 +92,37 @@ const onClickText = () => {
 const editInputModel = defineModel<string>()
 editInputModel.value = item.value.text
 
-const update = () => {
+const update = async () => {
     itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value })
     input.value?.blur()
+
+    await itemsStore.create(item.value.list, '');
 }
+
+const deleteItem = () => {
+    itemsStore.delete(item.value.list, item.value.id)
+}
+
+
+onMounted(() => {
+    if(item.value.text === '') {
+        asInput.value = true;
+        requestAnimationFrame(() => {
+            input.value?.focus();
+        })
+    }
+})
 </script>
 
 <template>
-    <div :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true"
+    <div class="item" :style="`padding-left: ${(depth || 0) * 8}px`" :data-id="item.id" :data-sort="item.sort" draggable="true"
         @dragstart="onDragStart">
-        <span>⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
-        <span v-if="!asInput" @click="onClickText">{{ item.text }}</span>
-        <input v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
+        <div class="textarea">
+            <span>⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
+            <span class="text" v-if="!asInput" @click="onClickText">{{ item.text }}</span>
+            <input class="text" v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
+            <button class="delete" @click="deleteItem">&#x1F5D1;</button>
+        </div>
         <div class="droparea">
             <div class="after" :class="showAfter ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"
                 @dragleave="onDragLeaveAfter" @drop="onDropAfter"></div>
@@ -114,6 +134,29 @@ const update = () => {
 </template>
 
 <style>
+.item {
+    margin-left: 8px;
+}
+
+.textarea {
+    display: flex;
+    align-items: center;
+
+    .text {
+        flex-grow: 1;
+    }
+
+    button {
+        border: none;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        line-height: normal;
+        cursor: pointer;
+    }
+}
+
+
 .droparea {
     font-size: xx-small;
 

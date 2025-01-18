@@ -147,6 +147,7 @@ func createItemForListId(listRepo *db.ListRepository, itemRepo *db.ItemRepositor
 			Text  string  `json:"text"`
 			After *string `json:"after"`
 		}
+		// TODO: add after support for creating new items
 		var newItem NewShoppingListItem
 		json.NewDecoder(r.Body).Decode(&newItem)
 		existingItems, err := itemRepo.FindAllByListId(r.Context(), listId)
@@ -190,7 +191,19 @@ func updateItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 				return
 			}
 		}
+	}
+}
 
+func deleteItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		itemId := r.PathValue("itemId")
+
+		err := itemRepo.Delete(r.Context(), itemId)
+		if err != nil {
+			slog.Info("we got err", "err", err)
+			http.Error(w, "bad", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -338,6 +351,7 @@ func main() {
 	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(listRepo, itemRepo))
 	r.Handle("POST /api/list/{listId}/item/", createItemForListId(listRepo, itemRepo))
 	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
+	r.Handle("DELETE /api/list/{listId}/item/{itemId}", deleteItemById(itemRepo))
 	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
 
 	slog.Info("Application ready!", "address", "http://localhost:3333")

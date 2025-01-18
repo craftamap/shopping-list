@@ -56,6 +56,12 @@ export const useItemsStore = defineStore('items', {
                 }),
             });
             return this.fetch(listId);
+        },
+        async delete(listId: string, itemId: string) {
+            await fetch(`/api/list/${listId}/item/${itemId}`, {
+                method: 'DELETE',
+            });
+            return this.fetch(listId);
         }
     }
 })
