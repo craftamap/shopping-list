@@ -11,27 +11,28 @@ import (
 	"log/slog"
 
 	"github.com/craftamap/shopping-list/db"
+	"github.com/craftamap/shopping-list/services"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func getAllLists(listRepo *db.ListRepository) http.HandlerFunc {
+func getAllLists(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		lists, err := listRepo.FindAll(r.Context())
+		lists, err := listService.GetAll(r.Context())
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 		err = json.NewEncoder(w).Encode(lists)
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 	}
 }
 
-func createList(listRepo *db.ListRepository) http.HandlerFunc {
+func createList(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		list, err := listRepo.Create(r.Context())
+		list, err := listService.Create(r.Context())
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -44,35 +45,29 @@ func createList(listRepo *db.ListRepository) http.HandlerFunc {
 	}
 }
 
-func getList(listRepo *db.ListRepository) http.HandlerFunc {
+func getList(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("listId")
-		list, err := listRepo.FindById(r.Context(), id)
+		list, err := listService.FindById(r.Context(), id)
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 		err = json.NewEncoder(w).Encode(list)
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 	}
 }
 
-func updateList(listRepo *db.ListRepository) http.HandlerFunc {
+func updateList(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		listId := r.PathValue("listId")
-		_, err := listRepo.FindById(r.Context(), listId)
-		if err != nil {
-			http.Error(w, "", 500)
-			return
-		}
-
 		var updateListStatus struct {
 			Status string `json:"status"`
 		}
-		err = json.NewDecoder(r.Body).Decode(&updateListStatus)
+		err := json.NewDecoder(r.Body).Decode(&updateListStatus)
 		if err != nil {
 			http.Error(w, err.Error(), 400)
 		}
@@ -84,34 +79,23 @@ func updateList(listRepo *db.ListRepository) http.HandlerFunc {
 			return
 		}
 
-		err = listRepo.UpdateStatus(r.Context(), listId, status)
+		list, err := listService.Update(r.Context(), listId, status)
 		if err != nil {
-			http.Error(w, err.Error(), 400)
-		}
-
-		// refetch list
-		list, err := listRepo.FindById(r.Context(), listId)
-		if err != nil {
-			http.Error(w, "", 500)
-			return
+			http.Error(w, err.Error(), 500)
 		}
 
 		err = json.NewEncoder(w).Encode(list)
 		if err != nil {
-			http.Error(w, "", 500)
+			http.Error(w, err.Error(), 500)
 			return
 		}
 	}
 }
 
-func getItemsByListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) http.HandlerFunc {
+func getItemsByListId(itemService *services.ItemService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("listId")
-		_, err := listRepo.FindById(r.Context(), id)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-		}
-		items, err := itemRepo.FindAllByListId(r.Context(), id)
+		items, err := itemService.FindAllByListId(r.Context(), id)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -124,44 +108,22 @@ func getItemsByListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) 
 	}
 }
 
-func findHighestSort(existingItems []db.ShoppingListItem) [2]int {
-	sortFractions := [2]int{0, 1}
-	sort := 0.0
-	for _, item := range existingItems {
-		if item.Parent == nil && item.Sort > sort {
-			sort = item.Sort
-			sortFractions = [2]int(item.SortFractions)
-		}
-	}
-	return sortFractions
-}
-
-func createItemForListId(listRepo *db.ListRepository, itemRepo *db.ItemRepository) http.HandlerFunc {
+func createItemForListId(itemService *services.ItemService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		listId := r.PathValue("listId")
-		_, err := listRepo.FindById(r.Context(), listId)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-		}
 		type NewShoppingListItem struct {
 			Text  string  `json:"text"`
 			After *string `json:"after"`
 		}
-		// TODO: add after support for creating new items
 		var newItem NewShoppingListItem
+		// TODO: add after support for creating new items
 		json.NewDecoder(r.Body).Decode(&newItem)
-		existingItems, err := itemRepo.FindAllByListId(r.Context(), listId)
-		if err != nil {
-			http.Error(w, err.Error(), 400)
-		}
-		highestSort := findHighestSort(existingItems)
-		newSort := [2]int{highestSort[0] + 1, highestSort[1]}
 
-		itemRepo.Create(r.Context(), listId, newItem.Text, newSort)
+		itemService.Create(r.Context(), listId, newItem.Text)
 	}
 }
 
-func updateItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
+func updateItemById(itemService *services.ItemService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		itemId := r.PathValue("itemId")
 		patch := struct {
@@ -170,35 +132,15 @@ func updateItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 		}{}
 		json.NewDecoder(r.Body).Decode(&patch)
 
-		if patch.Checked == nil && patch.Text == nil {
-			slog.Error("no change")
-			return
-		}
-
-		if patch.Checked != nil {
-			err := itemRepo.UpdateChecked(r.Context(), itemId, *patch.Checked)
-			if err != nil {
-				slog.Info("we got err", "err", err)
-				http.Error(w, "bad", http.StatusInternalServerError)
-				return
-			}
-		}
-		if patch.Text != nil {
-			err := itemRepo.UpdateText(r.Context(), itemId, *patch.Text)
-			if err != nil {
-				slog.Info("we got err", "err", err)
-				http.Error(w, "bad", http.StatusInternalServerError)
-				return
-			}
-		}
+		itemService.UpdateById(r.Context(), itemId, patch.Text, patch.Checked)
 	}
 }
 
-func deleteItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
+func deleteItemById(itemService *services.ItemService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		itemId := r.PathValue("itemId")
 
-		err := itemRepo.Delete(r.Context(), itemId)
+		err := itemService.DeleteById(r.Context(), itemId)
 		if err != nil {
 			slog.Info("we got err", "err", err)
 			http.Error(w, "bad", http.StatusInternalServerError)
@@ -207,17 +149,9 @@ func deleteItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 	}
 }
 
-func moveItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
-	findById := func(items []db.ShoppingListItem, id string) *db.ShoppingListItem {
-		for _, item := range items {
-			if item.ID == id {
-				return &item
-			}
-		}
-		return nil
-	}
-
+func moveItemById(itemService *services.ItemService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		itemId := r.PathValue("itemId")
 		ids := struct {
 			AfterId  *string `json:"afterId"` // id after which the item should be inserted
 			ParentId *string `json:"parentId"`
@@ -229,90 +163,11 @@ func moveItemById(itemRepo *db.ItemRepository) http.HandlerFunc {
 			return
 		}
 
-		itemId := r.PathValue("itemId")
-		item, err := itemRepo.FindById(r.Context(), itemId)
+		itemService.MoveById(r.Context(), itemId, services.MoveInstructions{
+			AfterId:  ids.AfterId,
+			ParentId: ids.ParentId,
+		})
 
-		if err != nil {
-			slog.Info("we got err", "err", err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		items, err := itemRepo.FindAllByListId(r.Context(), item.List)
-		if err != nil {
-			slog.Info("we got err", "err", err)
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		var after *db.ShoppingListItem  // moved item will be placed AFTER after
-		var before *db.ShoppingListItem // moved item will be placed BEFORE before
-		var parentId *string
-		if ids.AfterId != nil {
-			foundById := findById(items, *ids.AfterId)
-			if foundById == nil {
-				slog.Info("we got err", "err", err)
-				http.Error(w, err.Error(), 500)
-				return
-			}
-			after = foundById
-			parentId = after.Parent
-			// find "after" and the node after "after"
-			foundAfter := false
-			var afterAfter *db.ShoppingListItem
-			for _, i := range items {
-				if (i.Parent == nil && after.Parent == nil) || (i.Parent != nil && after.Parent != nil && *(i.Parent) == *(after.Parent)) {
-					if foundAfter && i.ID != itemId {
-						afterAfter = &i
-						break
-					}
-					if i.ID == *ids.AfterId {
-						foundAfter = true
-					}
-				}
-			}
-			before = afterAfter
-		} else if ids.ParentId != nil {
-			// fixme: check if ids.ParentId actually exists
-			parentId = ids.ParentId
-
-			var firstItemWithParent *db.ShoppingListItem
-			for _, item := range items {
-				if item.Parent != nil && *item.Parent == *ids.ParentId {
-					firstItemWithParent = &item
-					break
-				}
-			}
-
-			before = firstItemWithParent
-		}
-
-		numerator := 0
-		if after != nil {
-			numerator = numerator + after.SortFractions[0]
-		} else {
-			numerator = numerator + 0
-		}
-		if before != nil {
-			numerator = numerator + before.SortFractions[0]
-		} else {
-			numerator = numerator + 1
-		}
-
-		denominator := 0
-		if after != nil {
-			denominator = denominator + after.SortFractions[1]
-		} else {
-			denominator = denominator + 1
-		}
-		if before != nil {
-			denominator = denominator + before.SortFractions[1]
-		} else {
-			denominator = denominator + 0
-		}
-
-		newSortFractions := []int{numerator, denominator}
-
-		slog.Debug("move data", "itemId", itemId, "before", before, "after", after, "parentId", parentId, "newSortFractions", newSortFractions)
-		err = itemRepo.Move(r.Context(), itemId, parentId, newSortFractions)
 		if err != nil {
 			slog.Info("we got err", "err", err)
 			http.Error(w, err.Error(), 500)
@@ -341,18 +196,21 @@ func main() {
 	listRepo := db.NewListRepository(dbConn)
 	itemRepo := db.NewItemRepository(dbConn)
 
+	listService := services.NewListService(listRepo)
+	itemService := services.NewItemRepository(listRepo, itemRepo)
+
 	filesDir := http.Dir(filepath.Join("./frontend/dist"))
 
 	r.Handle("GET /", http.FileServer(filesDir))
-	r.Handle("GET /api/list/", getAllLists(listRepo))
-	r.Handle("POST /api/list/", createList(listRepo))
-	r.Handle("GET /api/list/{listId}/", getList(listRepo))
-	r.Handle("PATCH /api/list/{listId}/", updateList(listRepo))
-	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(listRepo, itemRepo))
-	r.Handle("POST /api/list/{listId}/item/", createItemForListId(listRepo, itemRepo))
-	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemRepo))
-	r.Handle("DELETE /api/list/{listId}/item/{itemId}", deleteItemById(itemRepo))
-	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemRepo))
+	r.Handle("GET /api/list/", getAllLists(listService))
+	r.Handle("POST /api/list/", createList(listService))
+	r.Handle("GET /api/list/{listId}/", getList(listService))
+	r.Handle("PATCH /api/list/{listId}/", updateList(listService))
+	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(itemService))
+	r.Handle("POST /api/list/{listId}/item/", createItemForListId(itemService))
+	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemService))
+	r.Handle("DELETE /api/list/{listId}/item/{itemId}", deleteItemById(itemService))
+	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemService))
 
 	slog.Info("Application ready!", "address", "http://localhost:3333")
 

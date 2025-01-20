@@ -5,7 +5,7 @@ export const useItemsStore = defineStore('items', {
         itemsByList: {} as Record<string, any>,
     }),
     getters: {
-        getItemsByList: (state) => ((id: string) => { console.log('a'); return state.itemsByList[id] })
+        getItemsByList: (state) => ((id: string) => { return state.itemsByList[id] })
     },
     actions: {
         async fetch(listId: string) {
