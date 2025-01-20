@@ -96,7 +96,7 @@ const update = async () => {
     itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value })
     input.value?.blur()
 
-    await itemsStore.create(item.value.list, '');
+    await itemsStore.create(item.value.list, '', item.value.id);
 }
 
 const deleteItem = () => {

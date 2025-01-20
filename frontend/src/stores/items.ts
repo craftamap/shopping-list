@@ -30,11 +30,12 @@ export const useItemsStore = defineStore('items', {
             });
             return this.fetch(listId);
         },
-        async create(listId: string, text: string) {
+        async create(listId: string, text: string, after?: string) {
             await fetch(`/api/list/${listId}/item/`, {
                 method: 'POST',
                 body: JSON.stringify({
                     text,
+                    after,
                 })
             })
             return this.fetch(listId);

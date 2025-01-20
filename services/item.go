@@ -43,7 +43,7 @@ func findHighestSort(existingItems []db.ShoppingListItem) [2]int {
 	return sortFractions
 }
 
-func (is *ItemService) Create(ctx context.Context, listId string, text string) error {
+func (is *ItemService) Create(ctx context.Context, listId string, text string, after *string) error {
 	_, err := is.listRepo.FindById(ctx, listId)
 	if err != nil {
 		return fmt.Errorf("Error getting list while creating item: %w", err)
@@ -56,7 +56,18 @@ func (is *ItemService) Create(ctx context.Context, listId string, text string) e
 	highestSort := findHighestSort(existingItems)
 	newSort := [2]int{highestSort[0] + 1, highestSort[1]}
 
-	return is.itemRepo.Create(ctx, listId, text, newSort)
+	itemId, err := is.itemRepo.Create(ctx, listId, text, newSort)
+	if err != nil {
+		return fmt.Errorf("Error getting list while creating item: %w", err)
+	}
+
+	if after == nil {
+		return nil
+	}
+
+	return is.MoveById(ctx, itemId, MoveInstructions{
+		AfterId: after,
+	})
 }
 
 func (is *ItemService) UpdateById(ctx context.Context, itemId string, text *string, checked *bool) error {

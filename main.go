@@ -119,7 +119,7 @@ func createItemForListId(itemService *services.ItemService) http.HandlerFunc {
 		// TODO: add after support for creating new items
 		json.NewDecoder(r.Body).Decode(&newItem)
 
-		itemService.Create(r.Context(), listId, newItem.Text)
+		itemService.Create(r.Context(), listId, newItem.Text, newItem.After)
 	}
 }
 

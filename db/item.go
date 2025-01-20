@@ -76,10 +76,10 @@ func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (Shopping
 	return item, nil
 }
 
-func (ir *ItemRepository) Create(ctx context.Context, listId string, text string, sortFractions [2]int) error {
+func (ir *ItemRepository) Create(ctx context.Context, listId string, text string, sortFractions [2]int) (string, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	sort := float64(sortFractions[0]) / float64(sortFractions[1])
@@ -89,7 +89,7 @@ func (ir *ItemRepository) Create(ctx context.Context, listId string, text string
 
 	_, err = ir.db.ExecContext(ctx, "INSERT INTO items (id, text, checked, parent, sort, sortFractions, list) VALUES (?, ?, ?, ?, ?, ?, ?)", id, text, false, nil, sort, buf.Bytes(), listId)
 
-	return err
+	return id.String(), err
 }
 
 func (ir *ItemRepository) UpdateChecked(ctx context.Context, itemId string, checked bool) error {
