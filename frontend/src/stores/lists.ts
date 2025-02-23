@@ -1,6 +1,5 @@
 import { defineStore } from "pinia";
 
-
 export type ListStatus = 'inprogress' | 'todo' | 'done'
 
 export const useListsStore = defineStore('lists', {
@@ -16,6 +15,9 @@ export const useListsStore = defineStore('lists', {
         async fetchAll() {
             const response = await fetch(`/api/list/`)
             if (!response.ok) {
+                if (response.status == 403) {
+                    this.router.push('/login')
+                }
                 // TODO: proper error handling - fine for now.
                 return
             }

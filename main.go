@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,9 +12,12 @@ import (
 
 	"log/slog"
 
+	"github.com/craftamap/shopping-list/auth"
 	"github.com/craftamap/shopping-list/db"
 	"github.com/craftamap/shopping-list/services"
+	"github.com/craftamap/shopping-list/session"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/urfave/cli/v3"
 )
 
 func getAllLists(listService *services.ListService) http.HandlerFunc {
@@ -175,6 +180,52 @@ func moveItemById(itemService *services.ItemService) http.HandlerFunc {
 		}
 	}
 }
+func login(userRepo *db.UserRepository, sessionRepo *db.SessionRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			slog.Error("failed to parse form", "err", err)
+		}
+		username := r.PostFormValue("username")
+		password := r.PostFormValue("password")
+
+		user, err := userRepo.FindByUsername(r.Context(), username)
+		if err != nil {
+			slog.Error("Failed to find user by username", "username", username, "err", err)
+			http.Redirect(w, r, "/#/login", http.StatusSeeOther)
+			return
+		}
+
+		match, err := auth.ComparePasswordAndHash(password, user.PasswordHash)
+		if err != nil || !match {
+			slog.Error("Failed to compare password", "err", err)
+			http.Redirect(w, r, "/#/login", http.StatusSeeOther)
+			return
+		}
+
+		err = session.ResetSessionValues(sessionRepo, r)
+		if err != nil {
+			slog.Error("Failed to reset session values", "err", err)
+			http.Redirect(w, r, "/#/login", http.StatusSeeOther)
+			return
+		}
+
+		userIDJson, err := json.Marshal(user.ID)
+		if err != nil {
+			slog.Error("Failed to marshal userID", "err", err)
+			http.Redirect(w, r, "/#/login", http.StatusSeeOther)
+			return
+		}
+		err = session.SetSessionValue(sessionRepo, r, auth.SESSION_VALUE_USERID, userIDJson)
+		if err != nil {
+			slog.Error("Failed to set session value", "err", err)
+			http.Redirect(w, r, "/#/login", http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, "/#/", http.StatusSeeOther)
+	}
+}
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -183,42 +234,120 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func main() {
-	slog.SetLogLoggerLevel(slog.LevelDebug.Level())
+func serve() error {
 	r := http.NewServeMux()
 
 	dbConn, err := sql.Open("sqlite3", "db.sqlite")
 	if err != nil {
-		slog.Error("failed to open db", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("failed to open db %w", err)
 	}
 
 	listRepo := db.NewListRepository(dbConn)
 	itemRepo := db.NewItemRepository(dbConn)
+	sessionRepo := db.NewSessionRepository(dbConn)
+	userRepo := db.NewUserRepository(dbConn)
 
 	listService := services.NewListService(listRepo)
 	itemService := services.NewItemRepository(listRepo, itemRepo)
 
 	filesDir := http.Dir(filepath.Join("./frontend/dist"))
 
-	r.Handle("GET /", http.FileServer(filesDir))
-	r.Handle("GET /api/list/", getAllLists(listService))
-	r.Handle("POST /api/list/", createList(listService))
-	r.Handle("GET /api/list/{listId}/", getList(listService))
-	r.Handle("PATCH /api/list/{listId}/", updateList(listService))
-	r.Handle("GET /api/list/{listId}/item/", getItemsByListId(itemService))
-	r.Handle("POST /api/list/{listId}/item/", createItemForListId(itemService))
-	r.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemService))
-	r.Handle("DELETE /api/list/{listId}/item/{itemId}", deleteItemById(itemService))
-	r.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemService))
+	fsRouter := http.NewServeMux()
+	fsRouter.Handle("GET /", http.FileServer(filesDir))
+
+	apiRouter := http.NewServeMux()
+	apiRouter.Handle("GET /api/list/", getAllLists(listService))
+	apiRouter.Handle("POST /api/list/", createList(listService))
+	apiRouter.Handle("GET /api/list/{listId}/", getList(listService))
+	apiRouter.Handle("PATCH /api/list/{listId}/", updateList(listService))
+	apiRouter.Handle("GET /api/list/{listId}/item/", getItemsByListId(itemService))
+	apiRouter.Handle("POST /api/list/{listId}/item/", createItemForListId(itemService))
+	apiRouter.Handle("PATCH /api/list/{listId}/item/{itemId}", updateItemById(itemService))
+	apiRouter.Handle("DELETE /api/list/{listId}/item/{itemId}", deleteItemById(itemService))
+	apiRouter.Handle("POST /api/list/{listId}/item/{itemId}/move", moveItemById(itemService))
+
+	r.Handle("/", fsRouter)
+	r.Handle("/api/", auth.EnsureSessionAuthMiddleware(apiRouter, sessionRepo))
+	r.Handle("POST /login", login(userRepo, sessionRepo))
 
 	slog.Info("Application ready!", "address", "http://localhost:3333")
 
 	handler := loggingMiddleware(r)
+	handler = session.SessionMiddleware(handler, sessionRepo)
 
 	err = http.ListenAndServe("0.0.0.0:3333", handler)
 	if err != nil {
-		slog.Error("failed to start webserver", "err", err)
+		return fmt.Errorf("failed to start webserver %w", err)
+	}
+	return nil
+}
+
+func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug.Level())
+
+	cmd := &cli.Command{
+		Commands: []*cli.Command{
+			{
+				Name: "serve",
+				Action: func(ctx context.Context, c *cli.Command) error {
+					return serve()
+				},
+			},
+			{
+				Name: "user",
+				Commands: []*cli.Command{
+					{
+						Name: "create",
+						Action: func(ctx context.Context, c *cli.Command) error {
+							fmt.Print("username: ")
+
+							var username string
+							_, err := fmt.Scan(&username)
+							if err != nil {
+								return fmt.Errorf("failed to read username: %w", err)
+							}
+							if len(username) < 3 {
+								return fmt.Errorf("username must be at least 3 letters long")
+							}
+							fmt.Print("password: ")
+
+							var password string
+							_, err = fmt.Scan(&password)
+							if err != nil {
+								return fmt.Errorf("failed to read password: %w", err)
+							}
+							if len(password) < 3 {
+								return fmt.Errorf("password must be at least 3 letters long")
+							}
+
+							slog.Info("got values", "username", username, "password", password)
+
+							encodedHash, err := auth.GenerateFromPassword(password)
+							if err != nil {
+								return fmt.Errorf("failed to create hash from password: %w", err)
+							}
+
+							dbConn, err := sql.Open("sqlite3", "db.sqlite")
+							if err != nil {
+								return fmt.Errorf("failed to connect to database: %w", err)
+							}
+							userRepo := db.NewUserRepository(dbConn)
+							_, err = userRepo.Create(ctx, username, encodedHash)
+							if err != nil {
+								return fmt.Errorf("failed to create user: %w", err)
+							}
+
+							return nil
+						},
+					},
+				},
+			},
+		},
+		DefaultCommand: "serve",
+	}
+
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		slog.Error("error during execution", "err", err)
 		os.Exit(1)
 	}
 }
