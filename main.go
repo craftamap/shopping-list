@@ -14,6 +14,7 @@ import (
 
 	"github.com/craftamap/shopping-list/auth"
 	"github.com/craftamap/shopping-list/db"
+	"github.com/craftamap/shopping-list/events"
 	"github.com/craftamap/shopping-list/services"
 	"github.com/craftamap/shopping-list/session"
 	_ "github.com/mattn/go-sqlite3"
@@ -242,13 +243,15 @@ func serve() error {
 		return fmt.Errorf("failed to open db %w", err)
 	}
 
+	hub := events.New()
+
 	listRepo := db.NewListRepository(dbConn)
 	itemRepo := db.NewItemRepository(dbConn)
 	sessionRepo := db.NewSessionRepository(dbConn)
 	userRepo := db.NewUserRepository(dbConn)
 
-	listService := services.NewListService(listRepo)
-	itemService := services.NewItemRepository(listRepo, itemRepo)
+	listService := services.NewListService(listRepo, hub)
+	itemService := services.NewItemRepository(listRepo, itemRepo, hub)
 
 	filesDir := http.Dir(filepath.Join("./frontend/dist"))
 
@@ -256,6 +259,7 @@ func serve() error {
 	fsRouter.Handle("GET /", http.FileServer(filesDir))
 
 	apiRouter := http.NewServeMux()
+	apiRouter.Handle("GET /api/events/", events.EstablishConnection(hub))
 	apiRouter.Handle("GET /api/list/", getAllLists(listService))
 	apiRouter.Handle("POST /api/list/", createList(listService))
 	apiRouter.Handle("GET /api/list/{listId}/", getList(listService))

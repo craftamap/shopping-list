@@ -10,9 +10,9 @@ import { createPinia } from 'pinia'
 
 const routes: RouteRecordRaw[] = [
     {
-        path: '/', 
+        path: '/',
         redirect: '/list'
-    }, 
+    },
     {
         path: '/list',
         component: Overview,
@@ -27,6 +27,9 @@ const routes: RouteRecordRaw[] = [
     }
 ];
 
+const ws = new WebSocket("ws://localhost:3333/api/events/")
+ws.addEventListener('message', console.log)
+
 const router = createRouter({
     history: createWebHashHistory(),
     routes: routes,
@@ -34,12 +37,12 @@ const router = createRouter({
 
 
 declare module "pinia" {
-  export interface PiniaCustomProperties {
-    router: Router;
-  }
+    export interface PiniaCustomProperties {
+        router: Router;
+    }
 }
 const pinia = createPinia()
-pinia.use(({store}) => {
+pinia.use(({ store }) => {
     store.router = markRaw(router)
 })
 

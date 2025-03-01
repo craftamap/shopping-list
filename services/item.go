@@ -3,19 +3,23 @@ package services
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/craftamap/shopping-list/db"
+	"github.com/craftamap/shopping-list/events"
 )
 
 type ItemService struct {
 	listRepo *db.ListRepository
 	itemRepo *db.ItemRepository
+	eventHub *events.EventHub
 }
 
-func NewItemRepository(listRepo *db.ListRepository, itemRepo *db.ItemRepository) *ItemService {
+func NewItemRepository(listRepo *db.ListRepository, itemRepo *db.ItemRepository, eventHub *events.EventHub) *ItemService {
 	return &ItemService{
 		listRepo: listRepo,
 		itemRepo: itemRepo,
+		eventHub: eventHub,
 	}
 }
 
@@ -61,6 +65,11 @@ func (is *ItemService) Create(ctx context.Context, listId string, text string, a
 		return fmt.Errorf("Error getting list while creating item: %w", err)
 	}
 
+	go func() {
+		err = is.eventHub.Publish(events.NewItemsInListChangedEvent(listId))
+		slog.Error("error during publish", "err", err)
+	}()
+
 	if after == nil {
 		return nil
 	}
@@ -73,6 +82,10 @@ func (is *ItemService) Create(ctx context.Context, listId string, text string, a
 func (is *ItemService) UpdateById(ctx context.Context, itemId string, text *string, checked *bool) error {
 	if text == nil && checked == nil {
 		return nil
+	}
+	item, err := is.itemRepo.FindById(ctx, itemId)
+	if err != nil {
+		return fmt.Errorf("Failed to get item to be updated: %w", err)
 	}
 
 	if checked != nil {
@@ -88,14 +101,28 @@ func (is *ItemService) UpdateById(ctx context.Context, itemId string, text *stri
 		}
 	}
 
+	go func() {
+		err = is.eventHub.Publish(events.NewItemsInListChangedEvent(item.List))
+		if err != nil {
+			slog.Error("error during publish", "err", err)
+			return
+		}
+	}()
 	return nil
 }
 
 func (is *ItemService) DeleteById(ctx context.Context, itemId string) error {
-	err := is.itemRepo.Delete(ctx, itemId)
+	item, err := is.itemRepo.FindById(ctx, itemId)
+	if err != nil {
+		return fmt.Errorf("Failed to find item to delete %w", err)
+	}
+	err = is.itemRepo.Delete(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("Failed to delete item %w", err)
 	}
+	go func() {
+		_ = is.eventHub.Publish(events.NewItemsInListChangedEvent(item.List))
+	}()
 	return nil
 }
 
@@ -195,6 +222,10 @@ func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr Mo
 	if err != nil {
 		return fmt.Errorf("failed to move item: %w", err)
 	}
+	go func() {
+		// FIXME: check error response
+		_ = is.eventHub.Publish(events.NewItemsInListChangedEvent(item.List))
+	}()
 
 	return nil
 }
