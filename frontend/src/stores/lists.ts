@@ -5,10 +5,14 @@ export type ListStatus = 'inprogress' | 'todo' | 'done'
 export const useListsStore = defineStore('lists', {
     state: () => ({
         lists: {} as Record<string, any>,
+        itemToMove: {} as Record<string, string | undefined>,
     }),
     getters: {
         sortedLists: (state) => {
             return Object.values(state.lists).toSorted((a, b) => a.date.localeCompare(b.date)).toReversed()
+        },
+        getItemToMove: (state) => {
+            return (listId: string) => state.itemToMove[listId]
         }
     },
     actions: {
@@ -71,7 +75,9 @@ export const useListsStore = defineStore('lists', {
             if (response.ok) {
                 return this.fetch(id)
             }
-
+        },
+        async setItemToMove(listId: string, itemId: string | undefined) {
+            this.itemToMove[listId] = itemId
         }
     }
 })

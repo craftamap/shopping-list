@@ -8,7 +8,8 @@ export function useWebSocket() {
     const itemsStore = useItemsStore()
 
     const connect = () => {
-        ws.value = new WebSocket("ws://localhost:3333/api/events/")
+        // location.host contains the port for some reason
+        ws.value = new WebSocket(`${location.protocol === 'http:' ? 'ws' : 'wss'}://${location.host}/api/events/`)
         ws.value.addEventListener('open', () => {
             console.log("WebSocket connected.");
         })
