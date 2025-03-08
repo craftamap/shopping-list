@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"iter"
 	"log/slog"
 
 	"github.com/craftamap/shopping-list/db"
@@ -67,7 +68,9 @@ func (is *ItemService) Create(ctx context.Context, listId string, text string, a
 
 	go func() {
 		err = is.eventHub.Publish(events.NewItemsInListChangedEvent(listId))
-		slog.Error("error during publish", "err", err)
+		if err != nil {
+			slog.Error("error during publish", "err", err)
+		}
 	}()
 
 	if after == nil {
@@ -131,7 +134,7 @@ type MoveInstructions struct {
 	ParentId *string
 }
 
-func findById(items []db.ShoppingListItem, id string) (*db.ShoppingListItem, bool) {
+func findByID(items []db.ShoppingListItem, id string) (*db.ShoppingListItem, bool) {
 	for _, item := range items {
 		if item.ID == id {
 			return &item, true
@@ -140,8 +143,29 @@ func findById(items []db.ShoppingListItem, id string) (*db.ShoppingListItem, boo
 	return nil, false
 }
 
-func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr MoveInstructions) error {
+func getAnchestors(items []db.ShoppingListItem, startItemID string) iter.Seq[*db.ShoppingListItem] {
+	return func(yield func(*db.ShoppingListItem) bool) {
+		item, ok := findByID(items, startItemID)
+		if !ok {
+			return
+		}
+		for item != nil {
+			if !yield(item) {
+				return
+			}
+			if item.Parent == nil {
+				return
+			}
+			item, ok = findByID(items, *item.Parent)
+			if !ok {
+				return
+			}
+		}
+	}
 
+}
+
+func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr MoveInstructions) error {
 	item, err := is.itemRepo.FindById(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("failed to get item while moving: %w", err)
@@ -156,7 +180,7 @@ func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr Mo
 	var before *db.ShoppingListItem // moved item will be placed BEFORE before
 	var parentId *string
 	if moveInstr.AfterId != nil {
-		foundById, ok := findById(items, *moveInstr.AfterId)
+		foundById, ok := findByID(items, *moveInstr.AfterId)
 		if !ok {
 			return fmt.Errorf("failed to find item with AfterId")
 		}
@@ -178,8 +202,11 @@ func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr Mo
 		}
 		before = afterAfter
 	} else if moveInstr.ParentId != nil {
-		// fixme: check if ids.ParentId actually exists
-		parentId = moveInstr.ParentId
+		parent, ok := findByID(items, *moveInstr.ParentId)
+		if !ok {
+			return fmt.Errorf("failed to find item with ParentId")
+		}
+		parentId = &parent.ID
 
 		var firstItemWithParent *db.ShoppingListItem
 		for _, item := range items {
@@ -190,6 +217,12 @@ func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr Mo
 		}
 
 		before = firstItemWithParent
+	}
+	for anchestor := range getAnchestors(items, *parentId) {
+		if anchestor.ID == item.ID {
+			// this means that the new parent would have the item as an anchestor, leading to a looping tree
+			return fmt.Errorf("illegal tree")
+		}
 	}
 
 	numerator := 0

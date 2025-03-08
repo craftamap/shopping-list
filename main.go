@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"log/slog"
@@ -20,6 +21,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/urfave/cli/v3"
 )
+
+//go:embed frontend/dist
+var embedFrontendFS embed.FS
 
 func getAllLists(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -169,11 +173,10 @@ func moveItemById(itemService *services.ItemService) http.HandlerFunc {
 			return
 		}
 
-		itemService.MoveById(r.Context(), itemId, services.MoveInstructions{
+		err = itemService.MoveById(r.Context(), itemId, services.MoveInstructions{
 			AfterId:  ids.AfterId,
 			ParentId: ids.ParentId,
 		})
-
 		if err != nil {
 			slog.Info("we got err", "err", err)
 			http.Error(w, err.Error(), 500)
@@ -235,7 +238,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func serve() error {
+func serve(useDirFS bool) error {
 	r := http.NewServeMux()
 
 	dbConn, err := sql.Open("sqlite3", "db.sqlite")
@@ -253,10 +256,22 @@ func serve() error {
 	listService := services.NewListService(listRepo, hub)
 	itemService := services.NewItemRepository(listRepo, itemRepo, hub)
 
-	filesDir := http.Dir(filepath.Join("./frontend/dist"))
+	var fileServer http.Handler
+	if useDirFS {
+		slog.Info("Serving files from directory")
+		filesDir := os.DirFS("./frontend/dist")
+		fileServer = http.FileServer(http.FS(filesDir))
+	} else {
+		slog.Info("Serving files from embedded filesystem")
+		filesDir, err := fs.Sub(embedFrontendFS, "frontend/dist")
+		if err != nil {
+			return fmt.Errorf("failed to open fs %w", err)
+		}
+		fileServer = http.FileServer(http.FS(filesDir))
+	}
 
 	fsRouter := http.NewServeMux()
-	fsRouter.Handle("GET /", http.FileServer(filesDir))
+	fsRouter.Handle("GET /", fileServer)
 
 	apiRouter := http.NewServeMux()
 	apiRouter.Handle("GET /api/events/", events.EstablishConnection(hub))
@@ -294,7 +309,14 @@ func main() {
 			{
 				Name: "serve",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					return serve()
+					useDirFS := c.Bool("dirFS")
+					return serve(useDirFS)
+				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "dirFS",
+						Value: false,
+					},
 				},
 			},
 			{
