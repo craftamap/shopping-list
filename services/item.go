@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"iter"
 	"log/slog"
+	"slices"
 
 	"github.com/craftamap/shopping-list/db"
 	"github.com/craftamap/shopping-list/events"
@@ -86,7 +87,7 @@ func (is *ItemService) UpdateById(ctx context.Context, itemId string, text *stri
 	if text == nil && checked == nil {
 		return nil
 	}
-	item, err := is.itemRepo.FindById(ctx, itemId)
+	item, err := is.itemRepo.FindByID(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("Failed to get item to be updated: %w", err)
 	}
@@ -115,10 +116,43 @@ func (is *ItemService) UpdateById(ctx context.Context, itemId string, text *stri
 }
 
 func (is *ItemService) DeleteById(ctx context.Context, itemId string) error {
-	item, err := is.itemRepo.FindById(ctx, itemId)
+	item, err := is.itemRepo.FindByID(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("Failed to find item to delete %w", err)
 	}
+
+	allItems, err := is.FindAllByListId(ctx, item.List)
+	if err != nil {
+		return fmt.Errorf("Failed to find items %w", err)
+	}
+
+	// DeleteFunc is sortof in-place inverted .filter. Good enough for this
+	children := slices.DeleteFunc(allItems, func(i db.ShoppingListItem) bool {
+		if i.Parent == nil {
+			return true
+		}
+		return (*i.Parent) != item.ID
+	})
+	// order needs to be inverted, as we move the items after the to-be-deleted item one by one
+	slices.SortFunc(children, func(a, b db.ShoppingListItem) int {
+		if a.Sort < b.Sort {
+			return 1
+		}
+		if a.Sort > b.Sort {
+			return -1
+		}
+		return 0
+	})
+	slog.Info("children ", "children", children)
+	for _, child := range children {
+		err := is.MoveById(ctx, child.ID, MoveInstructions{
+			AfterId: &item.ID,
+		})
+		if err != nil {
+			return fmt.Errorf("Failed to move child before deleting item: %w", err)
+		}
+	}
+
 	err = is.itemRepo.Delete(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("Failed to delete item %w", err)
@@ -166,7 +200,7 @@ func getAnchestors(items []db.ShoppingListItem, startItemID string) iter.Seq[*db
 }
 
 func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr MoveInstructions) error {
-	item, err := is.itemRepo.FindById(ctx, itemId)
+	item, err := is.itemRepo.FindByID(ctx, itemId)
 	if err != nil {
 		return fmt.Errorf("failed to get item while moving: %w", err)
 	}
@@ -218,10 +252,12 @@ func (is *ItemService) MoveById(ctx context.Context, itemId string, moveInstr Mo
 
 		before = firstItemWithParent
 	}
-	for anchestor := range getAnchestors(items, *parentId) {
-		if anchestor.ID == item.ID {
-			// this means that the new parent would have the item as an anchestor, leading to a looping tree
-			return fmt.Errorf("illegal tree")
+	if parentId != nil {
+		for anchestor := range getAnchestors(items, *parentId) {
+			if anchestor.ID == item.ID {
+				// this means that the new parent would have the item as an anchestor, leading to a looping tree
+				return fmt.Errorf("illegal tree")
+			}
 		}
 	}
 

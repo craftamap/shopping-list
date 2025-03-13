@@ -1,4 +1,5 @@
 FROM node:22 AS frontend
+LABEL org.opencontainers.image.source="https://github.com/craftamap/shopping-list"
 
 COPY frontend /app/frontend
 WORKDIR /app/frontend

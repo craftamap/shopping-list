@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/binary"
-	"slices"
 
 	"github.com/google/uuid"
 )
@@ -57,7 +56,7 @@ func (ir *ItemRepository) FindAllByListId(ctx context.Context, listId string) ([
 	return items, nil
 }
 
-func (ir *ItemRepository) FindById(ctx context.Context, itemId string) (ShoppingListItem, error) {
+func (ir *ItemRepository) FindByID(ctx context.Context, itemId string) (ShoppingListItem, error) {
 	row := ir.db.QueryRowContext(ctx, "SELECT id, text, checked, parent, sort, sortFractions, list FROM items WHERE id = ? LIMIT 1;", itemId)
 
 	item := ShoppingListItem{}
@@ -112,27 +111,7 @@ func (ir *ItemRepository) Move(ctx context.Context, itemId string, parentId *str
 	return err
 }
 
-func (ir *ItemRepository) Delete(ctx context.Context, itemId string) error {
-	item, err := ir.FindById(ctx, itemId)
-	if err != nil {
-		return err
-	}
-	children, err := ir.FindAllByListId(ctx, item.List)
-	if err != nil {
-		return err
-	}
-	slices.DeleteFunc(children, func(i ShoppingListItem) bool {
-		if i.Parent == nil {
-			return true
-		}
-		return (*i.Parent) != item.ID
-	})
-
-	for _, _ = range children {
-		// refactor:  we would need a service layer, as we would need a moveAfter here?
-		// TODO: moveAfter
-	}
-
-	_, err = ir.db.ExecContext(ctx, "DELETE FROM items WHERE id = ?", itemId)
+func (ir *ItemRepository) Delete(ctx context.Context, itemID string) error {
+	_, err := ir.db.ExecContext(ctx, "DELETE FROM items WHERE id = ?", itemID)
 	return err
 }
