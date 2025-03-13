@@ -25,6 +25,10 @@ import (
 //go:embed frontend/dist
 var embedFrontendFS embed.FS
 
+
+//go:embed schema
+var embedSchemaFS embed.FS
+
 func getAllLists(listService *services.ListService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		lists, err := listService.GetAll(r.Context())
@@ -244,6 +248,13 @@ func serve(useDirFS bool) error {
 	dbConn, err := sql.Open("sqlite3", "db.sqlite")
 	if err != nil {
 		return fmt.Errorf("failed to open db %w", err)
+	}
+	defer dbConn.Close()
+
+	err = db.EnsureUpToDateSchema(embedSchemaFS, dbConn, context.Background())
+	if err != nil {
+		// TODO: wrap
+		return err
 	}
 
 	hub := events.New()
