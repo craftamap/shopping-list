@@ -80,7 +80,6 @@ func applySqlFile(file fs.File, dbConn *sql.DB, ctx context.Context, isInitialMe
 	hasher := sha256.New()
 	hasher.Write(bytes)
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
-	// TODO: check if already executed
 
 	if !isInitialMetaTable {
 		row := dbConn.QueryRow("SELECT filename, hash FROM schema WHERE filename=?", stat.Name())

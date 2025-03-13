@@ -130,7 +130,6 @@ func createItemForListId(itemService *services.ItemService) http.HandlerFunc {
 			After *string `json:"after"`
 		}
 		var newItem NewShoppingListItem
-		// TODO: add after support for creating new items
 		json.NewDecoder(r.Body).Decode(&newItem)
 
 		itemService.Create(r.Context(), listId, newItem.Text, newItem.After)
@@ -253,8 +252,7 @@ func serve(useDirFS bool) error {
 
 	err = db.EnsureUpToDateSchema(embedSchemaFS, dbConn, context.Background())
 	if err != nil {
-		// TODO: wrap
-		return err
+		return fmt.Errorf("failed to ensure that schema is updated: %w", err)
 	}
 
 	hub := events.New()
