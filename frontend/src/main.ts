@@ -27,9 +27,6 @@ const routes: RouteRecordRaw[] = [
     }
 ];
 
-const ws = new WebSocket("ws://localhost:3333/api/events/")
-ws.addEventListener('message', console.log)
-
 const router = createRouter({
     history: createWebHashHistory(),
     routes: routes,
