@@ -146,7 +146,7 @@ const moveItemToMoveNested = () => {
             <span @click="setItemToMove">⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
             <span class="text" v-if="!asInput" @click="onClickText">{{ item.text }}</span>
             <input class="text" v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
-            <button class="delete" @click="deleteItem">&#x1F5D1;</button>
+            <button class="delete" @click="deleteItem">&#x00d7;</button>
         </div>
         <div class="droparea">
             <div class="after" :class="draggingOverAfter || itemToMove ? 'visible' : ''" @dragenter="onDragEnterAfter" @dragover="onDragOverAfter"

@@ -9,7 +9,9 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"os/signal"
 	"slices"
+	"syscall"
 
 	"log/slog"
 
@@ -24,7 +26,6 @@ import (
 
 //go:embed frontend/dist
 var embedFrontendFS embed.FS
-
 
 //go:embed schema
 var embedSchemaFS embed.FS
@@ -241,16 +242,22 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func serve(useDirFS bool) error {
+func serve(ctx context.Context, useDirFS bool) error {
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT)
+	defer stop()
+
 	r := http.NewServeMux()
 
-	dbConn, err := sql.Open("sqlite3", "db.sqlite")
+	dbConn, err := sql.Open("sqlite3", "db.sqlite?_foreign_keys=true&_journal_mode=WAL")
 	if err != nil {
 		return fmt.Errorf("failed to open db %w", err)
 	}
-	defer dbConn.Close()
+	defer func() {
+		slog.Info("closing database connection")
+		dbConn.Close()
+	}()
 
-	err = db.EnsureUpToDateSchema(embedSchemaFS, dbConn, context.Background())
+	err = db.EnsureUpToDateSchema(embedSchemaFS, dbConn, ctx)
 	if err != nil {
 		return fmt.Errorf("failed to ensure that schema is updated: %w", err)
 	}
@@ -303,11 +310,19 @@ func serve(useDirFS bool) error {
 	handler := loggingMiddleware(r)
 	handler = session.SessionMiddleware(handler, sessionRepo)
 
-	err = http.ListenAndServe("0.0.0.0:3333", handler)
-	if err != nil {
-		return fmt.Errorf("failed to start webserver %w", err)
-	}
-	return nil
+	server := &http.Server{Addr:"0.0.0.0:3333", Handler: handler}
+
+	ctx, cancel := context.WithCancelCause(ctx)
+	go func() {
+		err = server.ListenAndServe() 
+		if err != nil {
+			cancel(err)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Error("context done", "err", context.Cause(ctx))
+	return ctx.Err()
 }
 
 func main() {
@@ -319,7 +334,7 @@ func main() {
 				Name: "serve",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					useDirFS := c.Bool("dirFS")
-					return serve(useDirFS)
+					return serve(ctx, useDirFS)
 				},
 				Flags: []cli.Flag{
 					&cli.BoolFlag{

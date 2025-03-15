@@ -6,6 +6,7 @@ import ShoppingListItem from '../components/ShoppingListItem.vue'
 import { useItemsStore } from '../stores/items.ts'
 import { useListsStore } from '../stores/lists';
 import { computed } from 'vue';
+import Status from '../components/Status.vue';
 
 const buildItemTree = (items: any) => {
     const allNodes: Record<string, any> = {};
@@ -63,9 +64,12 @@ const create = () => {
 <template>
     <Header>
         <template v-slot:action-left>
-            <router-link to="/list">&#x2B90;</router-link>
+            <router-link to="/list">&#x276e;</router-link>
         </template>
         {{new Date(list?.date).toLocaleString()}}
+        <template v-slot:action-right v-if="list">
+            <Status :list="list"/>
+        </template>
     </Header>
     <ShoppingListItem v-for="item of items" :node="item" />
     <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
