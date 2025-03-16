@@ -1,14 +1,22 @@
-FROM denoland/deno
+FROM node:22 AS frontend
 LABEL org.opencontainers.image.source="https://github.com/craftamap/shopping-list"
 
-WORKDIR /app
-ADD . / /app/
-RUN deno cache main.ts
+COPY frontend /app/frontend
+WORKDIR /app/frontend
+RUN ["yarn", "install"]
+RUN ["yarn", "build"]
 
-CMD DENO_DEPLOYMENT_ID=LOCAL deno run \
-    --allow-env=DENO_DEPLOYMENT_ID,ESBUILD_BINARY_PATH,XDG_CACHE_HOME,HOME \
-    --allow-net \
-    --allow-read \
-    --allow-write=db.sqlite,db.sqlite-journal,/root/.cache/esbuild/bin,/tmp \
-    --allow-run \
-    main.ts
+FROM golang AS backend
+
+WORKDIR /app
+COPY . .
+COPY --from=frontend /app/frontend/dist /app/frontend/dist
+RUN ["go", "get"]
+RUN ["go", "build", "-v"]
+
+FROM debian:bookworm-slim
+WORKDIR /app
+COPY --from=backend /app/shopping-list /app/shopping-list
+
+ENTRYPOINT ["./shopping-list"]
+CMD ["serve"]

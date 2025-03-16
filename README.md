@@ -1,26 +1,29 @@
-# <img src="https://raw.githubusercontent.com/craftamap/shopping-list/master/static/icon.svg" width="32" height="32"> shopping-list
+# shopping-list
 
-This is my pet shopping-list project that I use daily. It's based on the
-[fresh framework](https://fresh.deno.dev/docs/introduction), using a sqlite
-database as it's storage.
+`shopping-list` is my personal shopping-list application. For each shopping trip, a list can be created. A list can be in a status (todo, in progress, done). Each list supports nested items - this allows to group items, for example by recipe. Grouping works by drag-and-drop, or by clicking on the tree dots next to a item, and then where to drop it.
 
 ## Development
 
-The project requires a recent version of Deno.
+### Architecture
 
-Start the project:
+The backend is a simple go backend, using go's built-in router. As a database, sqlite is used, using go-sqlite3.
 
+The frontend is built using Vue.js, vue-router and pinia.
+
+The frontend communicates with the backend via a simple HTTP + JSON API. Additionally, events are sent from the backend to the frontend via websockets - this is used to allow multiple clients to edit the same shopping list.
+
+
+### Getting started
+
+Install the required dependencies by running
+
+```sh
+(cd frontend && yarn install)
+go get
 ```
-deno task start
+
+Then the project can be build using 
+
+```sh
+just build
 ```
-
-This will watch the project directory and restart as necessary.
-
-## Production
-
-For production use, I recommend the docker container attached to this
-repository. Make sure to create a volume for the database, which is located at
-`/app/db.sqlite`.
-
-If you do not want to use the container, you can still use the Dockerfile as
-reference on what's required to run the application.
