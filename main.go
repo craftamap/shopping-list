@@ -248,7 +248,7 @@ func serve(ctx context.Context, useDirFS bool) error {
 
 	r := http.NewServeMux()
 
-	dbConn, err := sql.Open("sqlite3", "db.sqlite?_foreign_keys=true&_journal_mode=WAL")
+	dbConn, err := sql.Open("sqlite3", "db.sqlite?_foreign_keys=true")
 	if err != nil {
 		return fmt.Errorf("failed to open db %w", err)
 	}
