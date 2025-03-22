@@ -170,6 +170,7 @@ const moveItemToMoveNested = () => {
 
     .text {
         flex-grow: 1;
+        min-height: 1lh;
     }
 
     button {
