@@ -65,7 +65,8 @@ func createNewSession(w http.ResponseWriter, r *http.Request, sessionRepo *db.Se
 		Path:     "/",
 		MaxAge:   int((30 * 24 * time.Hour).Seconds()),
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		// Strict does cause problems with Android mobile
+		SameSite: http.SameSiteDefaultMode,
 	})
 
 	return r.WithContext(context.WithValue(r.Context(), CONTEXT_SESSION_ID, session.ID)), nil
