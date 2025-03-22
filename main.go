@@ -243,7 +243,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func serve(ctx context.Context, useDirFS bool) error {
-	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT)
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	r := http.NewServeMux()
@@ -310,11 +310,11 @@ func serve(ctx context.Context, useDirFS bool) error {
 	handler := loggingMiddleware(r)
 	handler = session.SessionMiddleware(handler, sessionRepo)
 
-	server := &http.Server{Addr:"0.0.0.0:3333", Handler: handler}
+	server := &http.Server{Addr: "0.0.0.0:3333", Handler: handler}
 
 	ctx, cancel := context.WithCancelCause(ctx)
 	go func() {
-		err = server.ListenAndServe() 
+		err = server.ListenAndServe()
 		if err != nil {
 			cancel(err)
 		}
