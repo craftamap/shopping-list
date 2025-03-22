@@ -23,10 +23,12 @@ const create = async () => {
             <button class="create" @click="create">+</button>
         </template>
     </Header>
-    <div class="list" v-for="list in lists" :data-id="list.id" >
-        <router-link :to="`/list/${list.id}`">{{ new Date(list.date).toLocaleString() }}</router-link>
-        <Status :list="list" />
-    </div>
+    <main>
+        <div class="list" v-for="list in lists" :data-id="list.id" >
+            <router-link :to="`/list/${list.id}`">{{ new Date(list.date).toLocaleString() }}</router-link>
+            <Status :list="list" />
+        </div>
+    </main>
 </template>
 
 <style scoped>
@@ -51,5 +53,10 @@ a {
     font: inherit;
     line-height: normal;
     cursor: pointer;
+}
+
+main {
+    max-width: 800px;
+    margin: 0 auto;
 }
 </style>

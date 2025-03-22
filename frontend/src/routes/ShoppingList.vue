@@ -71,12 +71,19 @@ const create = () => {
             <Status :list="list"/>
         </template>
     </Header>
-    <ShoppingListItem v-for="item of items" :node="item" />
-    <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
+    <main>
+        <ShoppingListItem v-for="item of items" :node="item" />
+        <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
+    </main>
 </template>
 
 <style>
 .newItem {
     width: 100%;
+}
+
+main {
+    max-width: 800px;
+    margin: 0 auto;
 }
 </style>

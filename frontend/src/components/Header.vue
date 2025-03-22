@@ -4,17 +4,16 @@
 
 <template>
     <div class="header">
-        <div class="action-left"><slot name="action-left"></slot></div>
-        <div class="header-text"><slot /></div>
-        <div class="action-right"><slot name="action-right"></slot></div>
+        <div class="inner">
+            <div class="action-left"><slot name="action-left"></slot></div>
+            <div class="header-text"><slot /></div>
+            <div class="action-right"><slot name="action-right"></slot></div>
+        </div>
     </div>
 </template>
 
 <style>
 .header {
-    display: flex;
-    align-items: center;
-
     width: 100%;
     padding: 1em;
     margin-bottom: 1em;
@@ -45,5 +44,13 @@
             text-decoration: inherit;
         }
     }
+}
+
+.header .inner {
+    display: flex;
+    align-items: center;
+
+    max-width: 800px;
+    margin: 0 auto;
 }
 </style>
