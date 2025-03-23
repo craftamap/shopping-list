@@ -10,12 +10,14 @@ import (
 
 type ListService struct {
 	listRepo *db.ListRepository
+	txFunc   db.TransactionFunc
 	eventHub *events.EventHub
 }
 
-func NewListService(listRepo *db.ListRepository, eventHub *events.EventHub) *ListService {
+func NewListService(listRepo *db.ListRepository, txFunc db.TransactionFunc, eventHub *events.EventHub) *ListService {
 	return &ListService{
 		listRepo: listRepo,
+		txFunc:   txFunc,
 		eventHub: eventHub,
 	}
 }

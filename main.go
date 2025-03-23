@@ -262,6 +262,8 @@ func serve(ctx context.Context, useDirFS bool) error {
 		return fmt.Errorf("failed to ensure that schema is updated: %w", err)
 	}
 
+	txFunc := db.WithTransaction(dbConn)
+
 	hub := events.New()
 
 	listRepo := db.NewListRepository(dbConn)
@@ -269,8 +271,8 @@ func serve(ctx context.Context, useDirFS bool) error {
 	sessionRepo := db.NewSessionRepository(dbConn)
 	userRepo := db.NewUserRepository(dbConn)
 
-	listService := services.NewListService(listRepo, hub)
-	itemService := services.NewItemRepository(listRepo, itemRepo, hub)
+	listService := services.NewListService(listRepo, txFunc, hub)
+	itemService := services.NewItemService(listRepo, itemRepo, txFunc, hub)
 
 	var fileServer http.Handler
 	if useDirFS {

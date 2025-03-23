@@ -14,13 +14,15 @@ import (
 type ItemService struct {
 	listRepo *db.ListRepository
 	itemRepo *db.ItemRepository
+	txFunc   db.TransactionFunc
 	eventHub *events.EventHub
 }
 
-func NewItemRepository(listRepo *db.ListRepository, itemRepo *db.ItemRepository, eventHub *events.EventHub) *ItemService {
+func NewItemService(listRepo *db.ListRepository, itemRepo *db.ItemRepository, txFunc db.TransactionFunc, eventHub *events.EventHub) *ItemService {
 	return &ItemService{
 		listRepo: listRepo,
 		itemRepo: itemRepo,
+		txFunc:   txFunc,
 		eventHub: eventHub,
 	}
 }
