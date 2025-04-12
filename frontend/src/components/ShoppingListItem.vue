@@ -3,13 +3,14 @@ import { computed, onMounted, ref, toRefs, useTemplateRef } from 'vue';
 import { useItemsStore } from '../stores/items';
 import { useListsStore } from '../stores/lists';
 import ShoppingListItemText from './ShoppingListItemText.vue';
+import { TreeNode } from '../routes/ShoppingList.vue';
 
 const props = defineProps<{
-    node: any,
+    node: TreeNode,
     depth?: number;
 }>();
 const { node, depth } = toRefs(props)
-const item = computed(() => node.value[1].item);
+const item = computed(() => node.value.item);
 const itemsStore = useItemsStore();
 const listsStore = useListsStore();
 
@@ -146,7 +147,7 @@ const moveItemToMoveNested = () => {
         <div class="textarea">
             <span @click="setItemToMove">⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
             <span class="text" v-if="!asInput" @click="onClickText"><ShoppingListItemText :text="item.text" /></span>
-            <input class="text" v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
+            <input class="text" :name="item.id" v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
             <button class="delete" @click="deleteItem">&#x00d7;</button>
         </div>
         <div class="droparea">
@@ -156,7 +157,7 @@ const moveItemToMoveNested = () => {
                 @dragover="onDragOverNested" @dragleave="onDragLeaveNested" @drop="onDropNested" @click="moveItemToMoveNested"></div>
         </div>
     </div>
-    <ShoppingListItem v-for="child of node[1].children" :node="child" :depth="(depth || 0) + 1" />
+    <ShoppingListItem v-for="child of node.children" :node="child" :depth="(depth || 0) + 1" :key="child.item.id" />
 </template>
 
 <style>

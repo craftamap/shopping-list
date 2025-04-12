@@ -3,13 +3,18 @@ import { useRoute } from 'vue-router';
 import Header from '../components/Header.vue'
 import { RouterLink } from 'vue-router';
 import ShoppingListItem from '../components/ShoppingListItem.vue'
+import { ShoppingListItem as Item } from '../stores/items.ts';
 import { useItemsStore } from '../stores/items.ts'
 import { useListsStore } from '../stores/lists';
 import { computed } from 'vue';
 import Status from '../components/Status.vue';
 
-const buildItemTree = (items: any) => {
-    const allNodes: Record<string, any> = {};
+export interface TreeNode {
+    item: Item,
+    children: TreeNode[],
+}
+const buildItemTree = (items: Item[]) => {
+    const allNodes: Record<string, TreeNode> = {};
     for (const item of items) {
         allNodes[item.id] = { item, children: [] }
     }
@@ -22,11 +27,11 @@ const buildItemTree = (items: any) => {
         } else {
             const parent = allNodes[item.parent];
             if (!!parent) {
-                parent.children.push(node);
+                parent.children.push(node[1]);
             }
         }
     }
-    return rootNodes
+    return rootNodes.map(([_, node]) => node);
 };
 
 const route = useRoute()
@@ -72,7 +77,7 @@ const create = () => {
         </template>
     </Header>
     <main>
-        <ShoppingListItem v-for="item of items" :node="item" />
+        <ShoppingListItem v-for="item of items" :node="item" :key="item.item.id" />
         <input class="newItem" type="text" enterkeyhint="enter" v-model="createInput" @keyup.enter="create" />
     </main>
 </template>

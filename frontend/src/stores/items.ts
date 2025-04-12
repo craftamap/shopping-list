@@ -1,8 +1,17 @@
 import { defineStore } from "pinia";
 
+export interface ShoppingListItem {
+    id: string,
+    text: string,
+    checked: boolean,
+    parent: string | null,
+    list: string,
+    sort: number,
+}
+
 export const useItemsStore = defineStore('items', {
     state: () => ({
-        itemsByList: {} as Record<string, any>,
+        itemsByList: {} as Record<string, ShoppingListItem[]>,
     }),
     getters: {
         getItemsByList: (state) => ((id: string) => { return state.itemsByList[id] })
