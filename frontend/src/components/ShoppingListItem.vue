@@ -96,10 +96,17 @@ const editInputModel = defineModel<string>()
 editInputModel.value = item.value.text
 
 const update = async () => {
-    itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value })
-    input.value?.blur()
+    itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value });
+    asInput.value = false;
 
-    await itemsStore.create(item.value.list, '', item.value.id);
+    if (editInputModel.value) {
+        await itemsStore.create(item.value.list, '', item.value.id);
+    }
+}
+
+const updateOnBlur = async () => {
+    itemsStore.update(item.value.list, item.value.id, { text: editInputModel.value });
+    asInput.value = false;
 }
 
 const deleteItem = () => {
@@ -147,7 +154,7 @@ const moveItemToMoveNested = () => {
         <div class="textarea">
             <span @click="setItemToMove">⋮</span><input type="checkbox" :checked="item.checked" @change="changeChecked" />
             <span class="text" v-if="!asInput" @click="onClickText"><ShoppingListItemText :text="item.text" /></span>
-            <input class="text" :name="item.id" v-if="asInput" @blur="asInput = false" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
+            <input class="text" :name="item.id" v-if="asInput" @blur="updateOnBlur" ref="text-input" v-model="editInputModel" enterkeyhint="enter" @keyup.enter="update" />
             <button class="delete" @click="deleteItem">&#x00d7;</button>
         </div>
         <div class="droparea">
