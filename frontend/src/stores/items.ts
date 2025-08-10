@@ -12,22 +12,47 @@ export interface ShoppingListItem {
 export const useItemsStore = defineStore('items', {
     state: () => ({
         itemsByList: {} as Record<string, ShoppingListItem[]>,
+        fetchState: {} as Record<string, {
+            promise: Promise<void>,
+            pending: boolean,
+            settled: boolean,
+        }>,
     }),
     getters: {
         getItemsByList: (state) => ((id: string) => { return state.itemsByList[id] })
     },
     actions: {
         async fetch(listId: string) {
-            const response = await fetch(`/api/list/${listId}/item/`)
-            if (!response.ok) {
-                // TODO: proper error handling - fine for now.
-                return
+            const doFetch = async () => {
+                const response = await fetch(`/api/list/${listId}/item/`)
+                if (!response.ok) {
+                    // TODO: proper error handling - fine for now.
+                    return
+                }
+                const json = await response.json()
+                this.itemsByList = {
+                    ...this.itemsByList,
+                    [listId]: json,
+                }
             }
-            const json = await response.json()
-            this.itemsByList = {
-                ...this.itemsByList,
-                [listId]: json,
+
+            // we want to prevent that we run multiple fetch requests at the same time, if possible. 
+            // we therefore keep track of the request promise state, and only fetch if for the list, no current active promise exists.
+            if (this.fetchState[listId]?.pending) {
+                return this.fetchState[listId]?.promise;
             }
+
+            const promise = doFetch();
+            const obj = {
+                promise,
+                pending: true,
+                settled: false,
+            };
+            this.fetchState[listId] = obj;
+            return Promise.allSettled([promise]).then(() => {
+                obj.pending = false;
+                obj.settled = true;
+            })
         },
         async update(listId: string, itemId: string, { checked, text }: { checked?: boolean, text?: string }) {
             await fetch(`/api/list/${listId}/item/${itemId}`, {
